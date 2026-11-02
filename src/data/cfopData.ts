@@ -567,6 +567,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: 'U F2',
     recognition: 'Arista en capa U con el sticker de la cruz mirando hacia arriba.',
     explanation: 'Alinea la arista con su centro lateral mediante U y bájala directo a la base D con F2.',
+    tags: ["Directa"],
+    grip: "Home grip (cruz abajo en D)",
+    auf: "Alinear centros con D",
   },
   {
     id: 'cross-2',
@@ -577,6 +580,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "R' D'",
     recognition: 'Arista atrapada en el cinturón central (FR) lista para bajar con un giro lateral.',
     explanation: 'Bájala con R\' a una posición relativa de la base y alinea toda la cruz al final con D\'. Ahorras 2 movimientos frente a subirla a U.',
+    tags: ["Directa","Capa media"],
+    grip: "Home grip",
+    auf: "Alinear cruz al final con D'",
   },
   {
     id: 'cross-3',
@@ -587,6 +593,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "U' R' F R",
     recognition: 'Arista en UF con el color de la cruz mirando hacia ti (desorientada para F2).',
     explanation: 'Muévela a un lado con U\', bájala a la capa media con R\', insértala en DF con F y restaura la arista derecha con R.',
+    tags: ["Invertida"],
+    grip: "Home grip",
+    auf: "Despejar slot con U'",
   },
   {
     id: 'cross-4',
@@ -597,6 +606,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "F' D R' D'",
     recognition: 'La arista ya está en su lugar abajo (DF), pero sus colores están volteados.',
     explanation: 'Súbela a la capa media con F\', desplaza la base con D para recibirla con R\' y devuelve la cruz con D\'.',
+    tags: ["Invertida"],
+    grip: "Home grip",
+    auf: "Restaurar base con D'",
   },
   {
     id: 'cross-5',
@@ -607,6 +619,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "F R' D'",
     recognition: 'Dos aristas conectadas: una arriba/frente y otra en la capa media lista para ser arrastrada.',
     explanation: 'Un solo giro F orienta y coloca dos piezas en cadena; R\' baja la segunda y D\' cuadra los 4 centros.',
+    tags: ["Relativa","2 en 1"],
+    grip: "Home grip",
+    auf: "Alinear 4 centros con D'",
   },
   {
     id: 'cross-6',
@@ -617,6 +632,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: 'R2 L2 U F2 D2',
     recognition: 'Aristas opuestas listas para bajar en los centros contrarios (180° desfasadas).',
     explanation: 'Inserta las aristas en sus centros opuestos sin gastar giros U extra y corrige toda la base de golpe con D2 al terminar.',
+    tags: ["Relativa","Offset D2"],
+    grip: "Home grip",
+    auf: "Corrección con D2",
   },
 
   // ============================================================================
@@ -633,6 +651,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Esquina y arista en capa U con colores superiores opuestos, listas para unirse al levantar R.',
     explanation: 'El caso base de todo F2L: al subir R se forma la barra sólida 2x1 en U; U la trae al frente y R\' la guarda abajo.',
     triggers: ['Inserción R'],
+    tags: ["Básico","Slot FR"],
+    grip: "Home grip (pulgar en F)",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-2',
@@ -645,6 +666,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'El bloque 2x1 ya está armado correctamente en la capa U apuntando a la derecha.',
     explanation: 'Aparta el par con U, abre el slot con R, coloca el par encima con U\' y cierra con R\'. También puedes usar Sledgehammer (R\' F R F\').',
     triggers: ['Inverse Sexy'],
+    tags: ["Básico","Slot FR"],
+    grip: "Home grip (Inverse Sexy)",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-3',
@@ -656,6 +680,9 @@ export const CFOP_CASES: CfopCase[] = [
     altAlg: "y' R' U' R",
     recognition: 'Espejo frontal del caso F2L-01: el sticker base de la esquina mira hacia la derecha y la arista está atrás-izquierda.',
     explanation: 'Ejecútalo sin rotar con F\' U\' F (pulgar o índice) o rota con y\' para resolverlo ergonómicamente en R\'.',
+    tags: ["Básico","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-4',
@@ -667,6 +694,9 @@ export const CFOP_CASES: CfopCase[] = [
     altAlg: "F R' F' R",
     recognition: 'Bloque 2x1 ya unido en U mirando hacia el frente (sobre UF/UFR).',
     explanation: 'Aparta a la izquierda con U\', abre el frente con F\', inserta con U y cierra con F. Alternativa pro sin regrip: Hedgeslammer (F R\' F\' R).',
+    tags: ["Básico","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-5',
@@ -678,6 +708,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Ambas piezas separadas en U muestran el MISMO color en la cara superior y el sticker base mira a la derecha.',
     explanation: 'Coloca la esquina atrás (U\'), escóndela abajo (R) mientras acercas la arista (U\'), sube R\' y te queda la inserción básica de 3 giros.',
     triggers: ['Extracción R', 'Inserción R'],
+    tags: ["Piezas unidas","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-6',
@@ -689,6 +722,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'El color de la cruz en la esquina apunta directo al techo (U) y la arista coincide con su centro derecho en UR.',
     explanation: 'Empuja la esquina sobre la arista con R U2 R\' para formar el bloque unido al instante y mételo con U\' R U R\'.',
     triggers: ['Inserción R'],
+    tags: ["Piezas unidas","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
 
   // --- Categoría 2: Piezas unidas mal orientadas ---
@@ -702,6 +738,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Esquina y arista están pegadas en U (UFR + UR), pero sus colores laterales están cruzados.',
     explanation: 'Sepáralas escondiendo la esquina (R U\' R\'), reoriéntalas con R U2 R\' e inserta el par limpio con U R U\' R\'.',
     triggers: ['Extracción R', 'Inverse Sexy'],
+    tags: ["Piezas unidas","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-8',
@@ -713,6 +752,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Par pegado entre UFR y UF con el color de la cruz mirando arriba y colores frontales distintos.',
     explanation: 'Al hacer R U2 R\' separas ambas piezas dejándolas perfectamente listas para el Inverse Sexy (U R U\' R\'). ¡Súper rápido!',
     triggers: ['Inverse Sexy'],
+    tags: ["Piezas unidas","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-9',
@@ -724,6 +766,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Esquina (UFR) y arista (UF) están pegadas mostrando el mismo color arriba y sticker base a la derecha.',
     explanation: 'Mueve el bloque con U\', sepáralas con R U\' R\' usando el slot vacío y únelas con U2 R U\' R\'.',
     triggers: ['Extracción R'],
+    tags: ["Piezas unidas","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-10',
@@ -735,6 +780,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Par pegado en UFR + UR con el sticker base mirando arriba y el color lateral coincidiendo.',
     explanation: 'Separa con U R U R\' enviando la arista al otro extremo y reconecta en 3 giros con U2 R U R\'.',
     triggers: ['Inserción R'],
+    tags: ["Piezas unidas","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
 
   // --- Categoría 3: Esquina en su lugar ---
@@ -748,6 +796,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'La esquina ya está bien orientada en su slot inferior (DFR) y la arista está arriba coincidiendo con el centro F.',
     explanation: 'El algoritmo clásico del método principiante ejecutado con fingertricks de CFOP: Inverse Sexy seguido de inserción frontal.',
     triggers: ['Inverse Sexy'],
+    tags: ["Esquina en slot","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-12',
@@ -759,6 +810,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Esquina atrapada abajo con el sticker base a la derecha; arista en UF con colores opuestos arriba.',
     explanation: 'Doble extracción R U\' R\': el primer R U\' R\' saca la esquina uniéndola automáticamente con la arista, y U R U\' R\' la inserta.',
     triggers: ['Extracción R', 'Inverse Sexy'],
+    tags: ["Esquina en slot","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-13',
@@ -770,6 +824,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Esquina atrapada abajo con el sticker base mirando al frente; arista en UR con el mismo color arriba.',
     explanation: 'Un Sexy Move seguido de R U R\': sacas la esquina y se empareja sola en el camino. Uno de los casos más satisfactorios.',
     triggers: ['Sexy Move', 'Inserción R'],
+    tags: ["Esquina en slot","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-14',
@@ -781,6 +838,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Tanto esquina como arista están en el slot FR: la arista está bien orientada pero la esquina está rotada.',
     explanation: 'Ejecuta Sexy Move casi 3 veces seguidas (11 movimientos sin cambiar agarre). Ideal para alcanzar +10 TPS.',
     triggers: ['Sexy Move', 'Inserción R'],
+    tags: ["Arista en slot","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
 
   // --- Categoría 4: Arista en su lugar ---
@@ -795,6 +855,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'La arista FR ya está bien puesta y la esquina está justo encima (UFR) con el sticker base mirando arriba.',
     explanation: '¡Tres Sexy Moves exactos [R U R\' U\'] x3 resuelven este caso sin pensar ni cambiar el agarre!',
     triggers: ['Sexy Move'],
+    tags: ["Arista en slot","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-16',
@@ -806,6 +869,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'La arista FR está bien orientada en su sitio y la esquina en UFR muestra el sticker base hacia la derecha.',
     explanation: 'Aparta la esquina con U\', extrae la arista con R U\' R\' para emparejarlas a distancia y cierra con U2 R U\' R\'.',
     triggers: ['Extracción R'],
+    tags: ["Arista en slot","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-17',
@@ -818,6 +884,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'La arista está metida al revés en FR y la esquina justo encima (UFR) tiene el sticker base mirando hacia la derecha.',
     explanation: '¡Solo 6 movimientos sin rotar el cubo! R U\' R\' saca la arista y la empareja en el aire para rematar directo con F\' U2 F.',
     triggers: ['Extracción R'],
+    tags: ["Ambas en slot","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
   {
     id: 'f2l-18',
@@ -830,6 +899,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'La esquina está perfectamente resuelta abajo, pero la arista encima de ella está volteada.',
     explanation: 'Saca el par con R U\' R\', sepáralo en U con U\' R U R\' y vuelve a insertar el bloque corregido con U2 R U\' R\'.',
     triggers: ['Extracción R', 'Inserción R'],
+    tags: ["Ambas en slot","Slot FR"],
+    grip: "Home grip",
+    auf: "Ranura FR",
   },
 
   // ============================================================================
@@ -846,6 +918,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Dos aristas opuestas orientadas formando una LÍNEA HORIZONTAL (de izquierda a derecha, nunca vertical).',
     explanation: 'Sostén la línea horizontal (UL–UR): baja F, haz un Sexy Move [R U R\' U\'] y deshaz F\'. ¡También es el Full OLL 45 (T-Shape)!',
     triggers: ['Sexy Move'],
+    tags: ["Línea"],
+    grip: "Home grip (F con índice derecho)",
+    auf: "Línea horizontal",
   },
   {
     id: 'oll-2l-lshape',
@@ -858,6 +933,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Dos aristas adyacentes orientadas formando una "L" pequeña. Colócala apuntando al FRENTE y a la DERECHA (UF + UR) para f.',
     explanation: 'Idéntico al algoritmo de la línea pero usando doble capa frontal minúscula (f + Sexy Move + f\'). Si usas F U R U\' R\' F\', pon la L atrás-izquierda (9:00).',
     triggers: ['Sexy Move'],
+    tags: ["L"],
+    grip: "Home grip (f con pulgar)",
+    auf: "L en atrás-izquierda",
   },
   {
     id: 'oll-2l-dot',
@@ -869,6 +947,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Ninguna de las 4 aristas muestra el color superior arriba (solo el centro está orientado).',
     explanation: 'Combina los dos casos anteriores sin pausa: [F + Sexy + F\'] crea la escuadra en UF/UR, e inmediatamente [f + Sexy + f\'] completa la cruz.',
     triggers: ['Sexy Move'],
+    tags: ["Punto"],
+    grip: "Home grip",
+    auf: "Cualquier ángulo",
   },
 
   // --- 2-Look OLL Paso 2: Orientar Esquinas - OCLL (7 Casos Esenciales) ---
@@ -882,6 +963,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Pez con 1 sola esquina orientada: pon la cabeza del pez abajo a la izquierda (ULF) y un sticker mirando hacia ti arriba a la derecha (UFR).',
     explanation: 'El algoritmo más famoso de OLL. Todo con R y U sin soltar el agarre: sube R, empuja U, baja R\', empuja U, sube R, double flick U2 y baja R\'.',
     triggers: ['Sune Trigger'],
+    tags: ["Cruz","Pez"],
+    grip: "Home grip (Sune estándar)",
+    auf: "Esquina orientada en UFL",
   },
   {
     id: 'oll-26',
@@ -894,6 +978,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Pez con 1 sola esquina orientada: pon la esquina orientada arriba a la derecha (URB) cuando el sticker frontal de UFR NO mira hacia ti (mira a la derecha).',
     explanation: 'Es el inverso exacto del Sune. Se ejecuta rapidísimo con R U2 R\' U\' R U\' R\' sin ningún cambio de mano.',
     triggers: ['Extracción R'],
+    tags: ["Cruz","Pez"],
+    grip: "Home grip (Antisune)",
+    auf: "Esquina orientada en UBR",
   },
   {
     id: 'oll-21',
@@ -906,6 +993,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Cruz completa sin ninguna esquina orientada, con dos pares de "faros" (headlights) opuestos: coloca los faros mirando al FRENTE y ATRÁS (o izq/der según variante: aquí izq y der).',
     explanation: 'Con los faros apuntando a IZQUIERDA y DERECHA: es un Sune al que le insertas un U R U\' R\' en medio. Alternativa: F + Triple Sexy + F\' (con faros al frente y atrás).',
     triggers: ['Extracción R'],
+    tags: ["Cruz","Faros"],
+    grip: "Home grip",
+    auf: "Faros en izquierda y derecha",
   },
   {
     id: 'oll-22',
@@ -916,6 +1006,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "R U2 R2 U' R2 U' R2 U2 R",
     recognition: 'Cruz completa sin esquinas orientadas: un lado tiene FAROS (izquierda, L) y el lado opuesto tiene stickers abiertos hacia frente y atrás (derecha, R).',
     explanation: 'Pon los faros a tu IZQUIERDA. Solo usa giros R y U con puros R2 y double flicks U2: simétrico, rítmico y cero regrips.',
+    tags: ["Cruz","Faros"],
+    grip: "Home grip",
+    auf: "Faros mirando atrás",
   },
   {
     id: 'oll-23',
@@ -926,6 +1019,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "R2 D R' U2 R D' R' U2 R'",
     recognition: '2 esquinas adyacentes ya orientadas atrás, y las 2 esquinas delanteras apuntan directo hacia ti como los faros de un auto.',
     explanation: 'Coloca los faros mirando HACIA TI (en F). Usa el anular izquierdo para D y el anular derecho para D\' mientras haces U2 con la otra mano.',
+    tags: ["Cruz","Faros"],
+    grip: "Home grip",
+    auf: "Faros a la derecha",
   },
   {
     id: 'oll-24',
@@ -937,6 +1033,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: '2 esquinas adyacentes orientadas a la derecha, y las 2 de la izquierda apuntan en sentidos opuestos (una hacia ti y otra hacia atrás, como ojos de camaleón).',
     explanation: 'Coloca el bloque resuelto a la DERECHA. Son solo 8 movimientos: un Wide Sexy [r U R\' U\'] seguido de un Sledgehammer ancho [r\' F R F\'].',
     triggers: ['Wide Sexy'],
+    tags: ["Cruz","Faros"],
+    grip: "Home grip",
+    auf: "Faros al frente",
   },
   {
     id: 'oll-25',
@@ -948,6 +1047,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: '2 esquinas diagonalmente opuestas orientadas (forma de moño). Pon una esquina sin orientar en UFR con su sticker superior mirando hacia ti (en F).',
     explanation: 'Son exactamente los mismos movimientos del Caso T (Chameleon), simplemente pasando el último F\' al principio del algoritmo.',
     triggers: ['Wide Sexy'],
+    tags: ["Cruz","Diagonal"],
+    grip: "Home grip",
+    auf: "Esquina derecha mirando atrás",
   },
 
   // --- Selección de Full OLL Populares (1-Look OLL Fáciles y Frecuentes) ---
@@ -961,6 +1063,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Letra "T" acostada arriba con un par de barras verticales a la izquierda (frente y atrás) en vez de faros laterales.',
     explanation: '¡Uno de los OLLs más fáciles de aprender! Literalmente es un Sexy Move [R U R\' U\'] seguido de un Sledgehammer [R\' F R F\'].',
     triggers: ['Sexy Move', 'Sledgehammer'],
+    tags: ["T"],
+    grip: "Home grip",
+    auf: "Barra T al frente",
   },
   {
     id: 'oll-37',
@@ -972,6 +1077,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Bloque cuadrado 2x2 arriba a la izquierda + 1 esquina diagonal en UFR tocándose por la punta (parece un pez sin cola).',
     explanation: 'Es el inverso exacto de OLL 33: haces Hedgeslammer [F R\' F\' R] seguido inmediatamente de Inverse Sexy [U R U\' R\'].',
     triggers: ['Hedgeslammer', 'Inverse Sexy'],
+    tags: ["Pez","Trébol"],
+    grip: "Home grip",
+    auf: "Esquinas no orientadas al frente",
   },
   {
     id: 'oll-5',
@@ -983,6 +1091,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Bloque cuadrado 2x2 orientado atrás-izquierda sin ninguna otra pieza superior orientada.',
     explanation: 'Es un Antisune con doble capa derecha al inicio y al final (r\' ... r). Rápido y fácil de recordar.',
     triggers: ['Inserción R'],
+    tags: ["Cuadrado"],
+    grip: "Home grip (r amplio)",
+    auf: "Cuadrado atrás-izquierda",
   },
   {
     id: 'oll-6',
@@ -993,6 +1104,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "r U2 R' U' R U' r'",
     recognition: 'Bloque cuadrado 2x2 orientado adelante-izquierda (espejo frontal de OLL 05).',
     explanation: 'Literalmente un Antisune estándar cambiando el primer R por r y el último R\' por r\'.',
+    tags: ["Cuadrado"],
+    grip: "Home grip (r amplio)",
+    auf: "Cuadrado atrás-derecha",
   },
   {
     id: 'oll-7',
@@ -1003,6 +1117,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "r U R' U R U2 r'",
     recognition: 'Forma de rayo o "Z" arriba con sticker frontal-derecho mirando hacia ti.',
     explanation: '¡Es exactamente un Sune cambiando el primer R por r (doble capa) y el último R\' por r\'!',
+    tags: ["Relámpago"],
+    grip: "Home grip",
+    auf: "Arista orientada a la izquierda",
   },
   {
     id: 'oll-8',
@@ -1013,6 +1130,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "r' U' R U' R' U2 r",
     recognition: 'Forma de rayo espejada respecto a OLL 07, con bloque orientado atrás-derecha.',
     explanation: 'Sune trasero con doble capa: r\' U\' R U\' R\' U2 r. Muy cómodo sin usar la mano izquierda para giros L.',
+    tags: ["Relámpago"],
+    grip: "Home grip",
+    auf: "Arista orientada a la derecha",
   },
   {
     id: 'oll-38',
@@ -1024,6 +1144,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Forma de escalera o "W" arriba; sostenla con el bloque de 2 piezas a la izquierda/atrás.',
     explanation: 'Empieza como Sune (R U R\' U), extrae (R U\' R\' U\') y remata con un Sledgehammer [R\' F R F\'].',
     triggers: ['Extracción R', 'Sledgehammer'],
+    tags: ["W"],
+    grip: "Home grip",
+    auf: "Bloque W al frente",
   },
   {
     id: 'oll-46',
@@ -1035,6 +1158,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Barra de 3 piezas orientada a la izquierda formando una letra "C" hacia la derecha y faros a la derecha.',
     explanation: 'Baja R\' U\', inserta un Sledgehammer [R\' F R F\'] en medio y cierra con U R. Solo 8 movimientos.',
     triggers: ['Sledgehammer'],
+    tags: ["C"],
+    grip: "Home grip",
+    auf: "C abierta a la derecha",
   },
 
   // ============================================================================
@@ -1051,6 +1177,9 @@ export const CFOP_CASES: CfopCase[] = [
     altAlg: "R U' R U R U R U' R' U' R2",
     recognition: 'Todas las esquinas resueltas + 1 barra completa atrás (B). La arista frontal debe viajar hacia la DERECHA (ciclo antihorario).',
     explanation: '[2-Look PLL Aristas] Coloca la barra resuelta ATRÁS. La versión con M-slices es brutalmente rápida (<0.9s). Incluye versión R/U alternativa.',
+    tags: ["Faros","Barra 1×3","Solo aristas"],
+    grip: "Home grip (M slices)",
+    auf: "Barra resuelta ATRÁS",
   },
   {
     id: 'pll-ub',
@@ -1062,6 +1191,9 @@ export const CFOP_CASES: CfopCase[] = [
     altAlg: "R2 U R U R' U' R' U' R' U R'",
     recognition: 'Todas las esquinas resueltas + 1 barra completa atrás (B). La arista frontal debe viajar hacia la IZQUIERDA (ciclo horario).',
     explanation: '[2-Look PLL Aristas] Idéntico a Ua-Perm pero cambiando ambos U por U\'. Mantén la barra resuelta atrás.',
+    tags: ["Faros","Barra 1×3","Solo aristas"],
+    grip: "Home grip (M slices)",
+    auf: "Barra resuelta ATRÁS",
   },
   {
     id: 'pll-h',
@@ -1072,6 +1204,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "M2 U M2 U2 M2 U M2",
     recognition: 'Esquinas resueltas en las 4 caras y cada arista tiene el color OPUESTO al de sus esquinas (patrón ajedrez en los 4 lados).',
     explanation: '[2-Look PLL Aristas] Funciona desde cualquier ángulo. Ritmo puro: M2 – U – M2 – U2 – M2 – U – M2.',
+    tags: ["Solo aristas","Sin bloques"],
+    grip: "Home grip (M2 anular+medio)",
+    auf: "Cualquier ángulo",
   },
   {
     id: 'pll-z',
@@ -1082,6 +1217,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "M' U M2 U M2 U M' U2 M2",
     recognition: 'Esquinas resueltas, ninguna barra completa, y solo 2 colores alternados por par de caras adyacentes (ej. frente-derecha comparten colores).',
     explanation: '[2-Look PLL Aristas] Sostén el cubo de modo que la arista frontal (UF) deba intercambiarse con la derecha (UR).',
+    tags: ["Solo aristas","Sin bloques"],
+    grip: "Mano derecha libre (M slices)",
+    auf: "Frente y derecha a intercambiar",
   },
 
   // --- Solo Esquinas (CPLL - 3 Casos) ---
@@ -1094,6 +1232,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "x R' U R' D2 R U' R' D2 R2 x'",
     recognition: 'Bloque cuadrado 2x2 resuelto adelante-izquierda + faros (headlights) atrás (en B).',
     explanation: 'Pon los faros ATRÁS y el bloque 2x2 adelante-izquierda. Inclina con x y usa double flicks de anular/meñique para D2.',
+    tags: ["Faros","Bloque 2×2"],
+    grip: "Regrip con rotación x",
+    auf: "Faros ATRÁS, bloque adelante-izq",
   },
   {
     id: 'pll-ab',
@@ -1104,6 +1245,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "x R2 D2 R U R' D2 R U' R x'",
     recognition: 'Bloque cuadrado 2x2 resuelto atrás-izquierda + faros (headlights) a la derecha (en R).',
     explanation: 'Inverso exacto de Aa-Perm: pon el bloque 2x2 atrás-izquierda (faros en R), inclina con x y ejecuta R2 D2.',
+    tags: ["Faros","Bloque 2×2"],
+    grip: "Regrip con rotación x",
+    auf: "Faros ATRÁS, bloque atrás-izq",
   },
   {
     id: 'pll-e',
@@ -1115,6 +1259,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Las 4 aristas ya coinciden con sus centros, pero NO hay ningún faro ni barra en todo el anillo superior.',
     explanation: 'Coloca una esquina en UFR cuyo sticker lateral derecho coincida con el centro frontal (F). Son 4 triggers encadenados con D y D\'.',
     triggers: ['Extracción R', 'Inserción R'],
+    tags: ["Sin faros","Diagonal"],
+    grip: "Regrip con rotación x",
+    auf: "Colores opuestos a los lados",
   },
 
   // --- Intercambio Adyacente (10 Casos: T, Jb, Ja, F, Ra, Rb + G-Perms en su grupo o aquí) ---
@@ -1128,6 +1275,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Faros a la IZQUIERDA con arista opuesta en medio, flanqueados por dos bloques 2x1 adelante y atrás.',
     explanation: '[2-Look PLL Esquinas] Si tienes 1 par de faros en 2-Look PLL, ponlos a la IZQUIERDA y aplica T-Perm. Arranca con Sexy Move y fluye increíble.',
     triggers: ['Sexy Move', 'Inserción R'],
+    tags: ["Faros","Bloque 2×1"],
+    grip: "Home grip estándar",
+    auf: "Faros a la IZQUIERDA",
   },
   {
     id: 'pll-jb',
@@ -1139,6 +1289,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Barra completa de 3 piezas resuelta a la IZQUIERDA + bloques 2x1 en frente y derecha.',
     explanation: 'Son exactamente las mismas piezas de movimiento que el T-Perm pero moviendo los últimos 4 giros al inicio. Casi todos los pros lo hacen sub-0.8s.',
     triggers: ['Inserción R', 'Sexy Move'],
+    tags: ["Faros","Barra 1×3","Bloque 2×2"],
+    grip: "Home grip",
+    auf: "Barra completa a la IZQUIERDA",
   },
   {
     id: 'pll-ja',
@@ -1150,6 +1303,9 @@ export const CFOP_CASES: CfopCase[] = [
     altAlg: "L' U' L F L' U' L U L F' L2 U L",
     recognition: 'Barra completa de 3 piezas resuelta ATRÁS (para alg con x) + bloques 2x1 a la izquierda y frente.',
     explanation: 'Con la barra completa ATRÁS, esta versión moderna con x R2 F R F\' evita usar la mano izquierda débil. Incluye versión L\' en alternativo.',
+    tags: ["Faros","Barra 1×3","Bloque 2×2"],
+    grip: "Home grip",
+    auf: "Barra completa a la DERECHA",
   },
   {
     id: 'pll-f',
@@ -1161,6 +1317,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: '1 barra completa de 3 piezas a la IZQUIERDA y NINGÚN otro faro ni bloque 2x1 en las otras 3 caras.',
     explanation: '¡Fácil de memorizar! Empieza con R\' U\' F\', ejecuta casi todo un T-Perm entero y cierra cancelando con U R.',
     triggers: ['Sexy Move', 'Inserción R'],
+    tags: ["Faros","Barra 1×3"],
+    grip: "Home grip",
+    auf: "Barra completa al FRENTE",
   },
   {
     id: 'pll-ra',
@@ -1172,6 +1331,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Faros a la IZQUIERDA con un bloque 2x1 pegado en la cara frontal-derecha (o trasera según orientación: aquí faros en L + bloque adelante-izquierda).',
     explanation: 'Algoritmo moderno regripless de R/U/D: usa el anular izquierdo para empujar D y el derecho para D\'.',
     triggers: ['Extracción R'],
+    tags: ["Faros","Bloque 2×2"],
+    grip: "Home grip",
+    auf: "Faros a la IZQUIERDA",
   },
   {
     id: 'pll-rb',
@@ -1183,6 +1345,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Faros en el FRENTE con bloque 2x1 pegado a su derecha (UFR + UR).',
     explanation: 'Coloca los faros al FRENTE con el bloque 2x1 a la derecha. Incluye un Sexy Move en medio envuelto por F y F\'.',
     triggers: ['Sexy Move'],
+    tags: ["Faros","Bloque 2×2"],
+    grip: "Home grip",
+    auf: "Faros a la IZQUIERDA",
   },
 
   // --- Diagonal y G-Perms (8 Casos: Y, V, Na, Nb + Ga, Gb, Gc, Gd = Total 21 PLLs) ---
@@ -1196,6 +1361,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Cero faros, pero dos bloques 2x1 tocándose en la esquina frontal-izquierda (ULF) dejando la esquina UFR aislada.',
     explanation: '[2-Look PLL Esquinas] Si NO ves faros en ningún lado en 2-Look PLL, aplica Y-Perm desde cualquier ángulo para crear faros o resolver esquinas. Termina con Sexy + Sledge (OLL 33).',
     triggers: ['Extracción R', 'Inserción R', 'Sexy Move', 'Sledgehammer'],
+    tags: ["Sin faros","Diagonal","Bloque 2×2"],
+    grip: "Home grip (F con índice)",
+    auf: "Bloque 2x2 adelante-izquierda",
   },
   {
     id: 'pll-v',
@@ -1207,6 +1375,9 @@ export const CFOP_CASES: CfopCase[] = [
     altAlg: "R' U R' U' y R' F' R2 U' R' U R' F R F y'",
     recognition: 'Bloque cuadrado 2x2 resuelto adelante-izquierda y ningún faro en las otras dos caras.',
     explanation: 'Versión moderna WCA sin rotaciones (R/U/D) con el bloque 2x2 adelante-izquierda. Incluye la versión clásica con rotación y en alternativo.',
+    tags: ["Sin faros","Diagonal","Bloque 2×2"],
+    grip: "Home grip",
+    auf: "Bloque 2x2 atrás-izquierda",
   },
   {
     id: 'pll-na',
@@ -1218,6 +1389,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Simétrico en las 4 caras: en cada cara hay un bloque 2x1 a la DERECHA y una esquina opuesta a la izquierda.',
     explanation: '¡Truco de memoria instantáneo! Empieza con R U R\' U, ejecuta un Jb-Perm completo en medio, y termina con U2 R U\' R\'.',
     triggers: ['Inserción R', 'Sexy Move', 'Extracción R'],
+    tags: ["Sin faros","Barra 1×3","Diagonal"],
+    grip: "Home grip",
+    auf: "Barras a izquierda y derecha",
   },
   {
     id: 'pll-nb',
@@ -1229,6 +1403,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Simétrico en las 4 caras: en cada cara hay un bloque 2x1 a la IZQUIERDA y una esquina opuesta a la derecha.',
     explanation: 'Funciona desde cualquier cara gracias a su simetría rotacional de 4 lados.',
     triggers: ['Inserción R', 'Hedgeslammer'],
+    tags: ["Sin faros","Barra 1×3","Diagonal"],
+    grip: "Home grip",
+    auf: "Barras a izquierda y derecha",
   },
   {
     id: 'pll-ga',
@@ -1239,6 +1416,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "R2 U R' U R' U' R U' R2 U' D R' U R D'",
     recognition: 'Único par de faros a la IZQUIERDA + un bloque 2x1 en el FRENTE-DERECHA (separado de los faros).',
     explanation: 'Los 4 G-Perms son fáciles cuando miras DÓNDE está el bloque 2x1 respecto a los faros de la izquierda. Usa U\' y D simultáneos al final.',
+    tags: ["Faros","Bloque 2×2"],
+    grip: "Home grip",
+    auf: "Faros a la IZQUIERDA, bloque adelante",
   },
   {
     id: 'pll-gb',
@@ -1249,6 +1429,9 @@ export const CFOP_CASES: CfopCase[] = [
     alg: "R' U' R U D' R2 U R' U R U' R U' R2 D",
     recognition: 'Único par de faros a la IZQUIERDA + un bloque 2x1 en la cara DERECHA-ATRÁS (opuesto a los faros).',
     explanation: 'Inverso de Ga-Perm: pon los faros a la izquierda y el bloque 2x1 pegado atrás en la cara R.',
+    tags: ["Faros","Bloque 2×2"],
+    grip: "Home grip",
+    auf: "Faros a la IZQUIERDA, bloque atrás",
   },
   {
     id: 'pll-gc',
@@ -1261,6 +1444,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Único par de faros a la IZQUIERDA + un bloque 2x1 ATRÁS-DERECHA en la cara B.',
     explanation: 'Espejo trasero de Ga-Perm. Incluye en alternativo la famosa variante R2 F2 sin movimientos D.',
     triggers: ['Extracción R'],
+    tags: ["Faros","Bloque 2×2"],
+    grip: "Home grip",
+    auf: "Faros a la IZQUIERDA, bloque adelante-der",
   },
   {
     id: 'pll-gd',
@@ -1272,6 +1458,9 @@ export const CFOP_CASES: CfopCase[] = [
     recognition: 'Único par de faros a la IZQUIERDA + un bloque 2x1 en la cara DERECHA-FRENTE.',
     explanation: 'Inverso de Gc-Perm: pon los faros a la izquierda; arranca con R U R\' y combina U\' + D en paralelo.',
     triggers: ['Inserción R'],
+    tags: ["Faros","Bloque 2×2"],
+    grip: "Home grip",
+    auf: "Faros a la IZQUIERDA, bloque atrás-der",
   },
 ];
 

@@ -6,6 +6,8 @@
   html {
     color-scheme: dark;
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     background-color: #09090b;
   }
 
@@ -16,6 +18,60 @@
     color: #f4f4f5;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
+    overscroll-behavior-y: none;
+  }
+
+  /* Elimina el retraso de doble toque / zoom accidental en iOS */
+  button,
+  a,
+  [role='button'],
+  input {
+    touch-action: manipulation;
+  }
+}
+
+@layer utilities {
+  /* Safe areas de iPhone (notch / Dynamic Island / home indicator) */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pb-safe-2 {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  }
+  .px-safe {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  /* Reserva espacio para el dock inferior móvil */
+  .pb-dock {
+    padding-bottom: calc(8.25rem + env(safe-area-inset-bottom));
+  }
+  @media (min-width: 1024px) {
+    .pb-dock {
+      padding-bottom: 2.5rem;
+    }
+  }
+
+  .max-h-sheet {
+    max-height: calc(100dvh - env(safe-area-inset-top) - 0.75rem);
+  }
+
+  /* Offset para elementos sticky bajo el header (56px + notch en modo standalone) */
+  .top-header {
+    top: calc(3.5rem + env(safe-area-inset-top));
+  }
+
+  /* Scroll horizontal sin barra visible (chips, secuencias) */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -26,7 +82,7 @@ twisty-player {
   height: 100%;
 }
 
-/* Scrollbar técnico minimalista */
+/* Scrollbar técnico minimalista (desktop) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -43,4 +99,13 @@ twisty-player {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #3f3f46;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

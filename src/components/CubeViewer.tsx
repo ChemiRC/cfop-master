@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Copy,
   Pause,
   Play,
-  RefreshCw,
   RotateCcw,
   SkipForward,
 } from 'lucide-react';
@@ -20,10 +20,12 @@ import type {
   TwistyPlayerElement,
 } from '../types/cfop';
 import { mirrorAlgLR, splitAlgMoves } from '../utils/algHelpers';
+import { triggerHaptic } from '../utils/haptics';
 import { Cube2DPreview } from './Cube2DPreview';
 
 interface CubeViewerProps {
   selection: ActiveSelection;
+  isLeftyGlobal?: boolean;
 }
 
 const SPEED_SEGMENTS = [
@@ -48,37 +50,27 @@ const STAGE_ACCENTS: Record<
   CfopStage,
   { label: string; dotClass: string; textClass: string }
 > = {
-  Notation: {
-    label: 'WCA',
-    dotClass: 'bg-[#FAFAFA]',
-    textClass: 'text-[#FAFAFA]',
-  },
-  Cross: {
-    label: 'CROSS',
-    dotClass: 'bg-[#F4F4F5]',
-    textClass: 'text-[#F4F4F5]',
-  },
-  F2L: {
-    label: 'F2L',
-    dotClass: 'bg-[#3B82F6]',
-    textClass: 'text-[#3B82F6]',
-  },
-  OLL: {
-    label: 'OLL',
-    dotClass: 'bg-[#EAB308]',
-    textClass: 'text-[#EAB308]',
-  },
-  PLL: {
-    label: 'PLL',
-    dotClass: 'bg-[#EF4444]',
-    textClass: 'text-[#EF4444]',
-  },
+  Notation: { label: 'WCA', dotClass: 'bg-[#FAFAFA]', textClass: 'text-[#FAFAFA]' },
+  Cross: { label: 'CROSS', dotClass: 'bg-[#F4F4F5]', textClass: 'text-[#F4F4F5]' },
+  F2L: { label: 'F2L', dotClass: 'bg-[#3B82F6]', textClass: 'text-[#3B82F6]' },
+  OLL: { label: 'OLL', dotClass: 'bg-[#EAB308]', textClass: 'text-[#EAB308]' },
+  PLL: { label: 'PLL', dotClass: 'bg-[#EF4444]', textClass: 'text-[#EF4444]' },
 };
 
-/**
- * Contenedor hoja vacío y aislado de React para <twisty-player>.
- * Usa `invisible` en vez de `display: none` en modo 2D para preservar dimensiones WebGL > 0.
- */
+const CTRL_BTN =
+  'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-zinc-800 bg-[#09090B] text-zinc-300 transition-colors hover:bg-[#16161A] hover:text-[#FAFAFA] active:bg-[#1C1C21] disabled:cursor-not-allowed disabled:opacity-35 lg:h-9 lg:w-9';
+
+const CHIP_BTN =
+  'inline-flex h-8 items-center rounded-md border px-2.5 font-mono text-[11px] font-medium transition-colors lg:h-6 lg:px-2 lg:text-[10px]';
+
+function chipClass(active: boolean): string {
+  return `${CHIP_BTN} ${
+    active
+      ? 'border-[#FAFAFA] bg-[#FAFAFA] text-[#09090B]'
+      : 'border-[#222226] bg-[#111113]/90 text-zinc-400 hover:text-zinc-200'
+  }`;
+}
+
 const IsolatedTwistyHost = React.memo(
   React.forwardRef<HTMLDivElement, { hidden?: boolean }>(({ hidden }, ref) => (
     <div
@@ -91,9 +83,11 @@ const IsolatedTwistyHost = React.memo(
 );
 IsolatedTwistyHost.displayName = 'IsolatedTwistyHost';
 
-export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
+export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<TwistyPlayerElement | null>(null);
+  const sequenceRef = useRef<HTMLDivElement | null>(null);
+  const moveButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const [playerReady, setPlayerReady] = useState<boolean>(false);
   const [cdnTimedOut, setCdnTimedOut] = useState<boolean>(false);
@@ -101,9 +95,14 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
   const [tempoScale, setTempoScale] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'3D' | '2D'>('3D');
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>('right');
-  const [isMirrored, setIsMirrored] = useState<boolean>(false);
+  const [isMirrored, setIsMirrored] = useState<boolean>(Boolean(isLeftyGlobal));
   const [useAltAlg, setUseAltAlg] = useState<boolean>(false);
   const [forceFullStickering, setForceFullStickering] = useState<boolean>(false);
+  const [showDetails, setShowDetails] = useState<boolean>(
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(min-width: 1024px)').matches
+  );
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [atStart, setAtStart] = useState<boolean>(true);
@@ -113,10 +112,10 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
   const [copied, setCopied] = useState<boolean>(false);
 
   useEffect(() => {
-    setIsMirrored(false);
+    setIsMirrored(Boolean(isLeftyGlobal));
     setUseAltAlg(false);
     setForceFullStickering(false);
-  }, [selection.id]);
+  }, [selection.id, isLeftyGlobal]);
 
   const baseAlg = useAltAlg && selection.altAlg ? selection.altAlg : selection.alg;
   const effectiveAlg = useMemo(
@@ -321,10 +320,25 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
     }
   }, [playerReady, cameraPreset]);
 
+  // Centra horizontalmente el movimiento activo en la tira de secuencia (móvil)
+  useEffect(() => {
+    const strip = sequenceRef.current;
+    if (!strip) return;
+    if (activeMoveIndex < 0) {
+      strip.scrollTo({ left: 0, behavior: 'smooth' });
+      return;
+    }
+    const btn = moveButtonRefs.current[activeMoveIndex];
+    if (!btn || strip.scrollWidth <= strip.clientWidth) return;
+    const target = btn.offsetLeft - strip.clientWidth / 2 + btn.clientWidth / 2;
+    strip.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+  }, [activeMoveIndex]);
+
   const handleTogglePlay = useCallback(() => {
     const player = playerRef.current;
     if (!player) return;
 
+    triggerHaptic('medium');
     try {
       if (isPlaying) {
         player.pause?.();
@@ -342,6 +356,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
   const handleReset = useCallback(() => {
     const player = playerRef.current;
     if (!player) return;
+    triggerHaptic('medium');
     try {
       player.pause?.();
       player.jumpToStart?.({ flash: false });
@@ -355,6 +370,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
   const handleJumpToEnd = useCallback(() => {
     const player = playerRef.current;
     if (!player) return;
+    triggerHaptic('medium');
     try {
       player.pause?.();
       player.jumpToEnd?.({ flash: false });
@@ -363,41 +379,30 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
     }
   }, []);
 
-  const handleStepForward = useCallback(() => {
+  const stepPlayer = useCallback((direction: 1 | -1) => {
     const player = playerRef.current;
-    if (!player || atEnd) return;
+    if (!player) return;
+    triggerHaptic('light');
     try {
-      const animCtrl = player.controller?.animationController;
-      if (animCtrl?.play) {
-        animCtrl.play({
-          direction: 1,
-          untilBoundary: 'move',
-          autoSkipToOtherEndIfStartingAtBoundary: false,
-        });
-      }
+      player.controller?.animationController?.play?.({
+        direction,
+        untilBoundary: 'move',
+        autoSkipToOtherEndIfStartingAtBoundary: false,
+      });
     } catch {
       // Ignorar error
     }
-  }, [atEnd]);
+  }, []);
+
+  const handleStepForward = useCallback(() => {
+    if (!atEnd) stepPlayer(1);
+  }, [atEnd, stepPlayer]);
 
   const handleStepBackward = useCallback(() => {
-    const player = playerRef.current;
-    if (!player || atStart) return;
-    try {
-      const animCtrl = player.controller?.animationController;
-      if (animCtrl?.play) {
-        animCtrl.play({
-          direction: -1,
-          untilBoundary: 'move',
-          autoSkipToOtherEndIfStartingAtBoundary: false,
-        });
-      }
-    } catch {
-      // Ignorar error
-    }
-  }, [atStart]);
+    if (!atStart) stepPlayer(-1);
+  }, [atStart, stepPlayer]);
 
-  // Atajos de teclado reales: Space (Play/Pausa), <- / -> (Paso a paso), R (Reiniciar)
+  // Atajos de teclado: Space (Play/Pausa), ← / → (Paso a paso), R (Reiniciar)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!playerReady) return;
@@ -442,14 +447,13 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
   const handleJumpToMove = useCallback(async (index: number) => {
     const player = playerRef.current;
     if (!player) return;
+    triggerHaptic('light');
     try {
       player.pause?.();
       const indexer = await player.experimentalModel?.indexer?.get();
       if (indexer) {
-        const targetTs =
-          indexer.indexToMoveStartTimestamp(index) +
-          indexer.moveDuration(index);
-        player.timestamp = targetTs;
+        player.timestamp =
+          indexer.indexToMoveStartTimestamp(index) + indexer.moveDuration(index);
       }
     } catch {
       // Ignorar error transitorio
@@ -457,6 +461,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
   }, []);
 
   const handleToggleMirror = useCallback(() => {
+    triggerHaptic('selection');
     setIsMirrored((prev) => {
       const next = !prev;
       setCameraPreset(next ? 'left' : 'right');
@@ -467,6 +472,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
   const handleCopyAlg = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(effectiveAlg);
+      triggerHaptic('success');
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
@@ -477,201 +483,195 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
   const stageAccent = STAGE_ACCENTS[selection.stage] ?? STAGE_ACCENTS.Notation;
   const previewStageFor2D: LearningStage =
     selection.stage === 'Notation' ? 'F2L' : selection.stage;
+  const isNotation = selection.stage === 'Notation';
 
   return (
-    <div className="flex flex-col rounded-lg border border-[#222226] bg-[#111113]">
-      {/* Cabecera Técnica del Caso */}
-      <div className="border-b border-[#222226] px-3.5 py-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <span
-            translate="no"
-            className={`font-mono text-xs font-semibold tabular-nums ${stageAccent.textClass}`}
-          >
-            {selection.code}
-          </span>
-          <span className="truncate font-mono text-[11px] text-zinc-500">
-            {selection.subtitle}
-          </span>
-        </div>
-        <h2 className="mt-0.5 truncate text-sm font-semibold text-[#FAFAFA]">
+    <div className="flex flex-col overflow-hidden rounded-lg border border-[#222226] bg-[#111113]">
+      {/* Cabecera del caso */}
+      <div className="flex items-center gap-2.5 border-b border-[#222226] px-3 py-2.5">
+        <span
+          translate="no"
+          className={`shrink-0 font-mono text-xs font-semibold tabular-nums ${stageAccent.textClass}`}
+        >
+          {selection.code}
+        </span>
+        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-[#FAFAFA]">
           {selection.title}
         </h2>
+        {isMirrored && (
+          <span className="rounded border border-[#3B82F6]/40 bg-[#3B82F6]/10 px-1.5 py-0.5 font-mono text-[10px] font-medium text-[#3B82F6]">
+            ZURDO L↔R
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={handleCopyAlg}
+          aria-label="Copiar algoritmo"
+          className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md px-2 font-mono text-[11px] text-zinc-400 transition-colors hover:bg-[#16161A] hover:text-[#FAFAFA]"
+        >
+          {copied ? (
+            <Check className="h-3.5 w-3.5 text-[#10B981]" />
+          ) : (
+            <Copy className="h-3.5 w-3.5" />
+          )}
+          <span className="hidden sm:inline">{copied ? 'Copiado' : 'Copiar'}</span>
+        </button>
       </div>
 
-      {/* Viewport de Estudio 3D / 2D */}
-      <div className="relative flex flex-col items-center justify-center border-b border-[#222226] bg-[#0C0C0E] px-3 pt-9 pb-9">
-        {/* Esquina Superior Izquierda: Etapa activa + Conteo HTM */}
+      {/* Viewport 3D / 2D con etiquetas en las esquinas */}
+      <div className="relative h-[clamp(210px,34dvh,270px)] border-b border-[#222226] bg-[#0C0C0E] lg:h-72">
+        <IsolatedTwistyHost ref={containerRef} hidden={viewMode !== '3D'} />
+
+        {viewMode === '2D' && (
+          <div className="absolute inset-0 flex items-center justify-center [&>div]:h-40 [&>div]:w-40">
+            <Cube2DPreview alg={effectiveAlg} stage={previewStageFor2D} />
+          </div>
+        )}
+
+        {viewMode === '3D' && !playerReady && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span className="font-mono text-xs text-zinc-500">
+              {cdnTimedOut ? 'Sin conexión con cdn.cubing.net' : 'Cargando 3D…'}
+            </span>
+          </div>
+        )}
+
+        {/* Superior izquierda: etapa + HTM */}
         <div
           translate="no"
-          className="pointer-events-none absolute top-2.5 left-3 z-10 flex items-center gap-2 font-mono text-xs tabular-nums text-zinc-400"
+          className="pointer-events-none absolute top-2.5 left-3 z-10 flex items-center gap-1.5 font-mono text-[11px] tabular-nums text-zinc-400"
         >
-          <span className="inline-flex items-center gap-1.5">
-            <span className={`h-1.5 w-1.5 rounded-full ${stageAccent.dotClass}`} />
-            <span className="text-zinc-300">{stageAccent.label}</span>
-          </span>
+          <span className={`h-1.5 w-1.5 rounded-full ${stageAccent.dotClass}`} />
+          <span className="text-zinc-300">{stageAccent.label}</span>
           <span className="text-zinc-700">/</span>
           <span>{moves.length} HTM</span>
         </div>
 
-        {/* Esquina Superior Derecha: Selector Segmented Vista 3D / 2D */}
+        {/* Superior derecha: 3D / 2D */}
         <div
           translate="no"
-          className="absolute top-2 right-2.5 z-10 inline-flex items-center rounded-md border border-[#222226] bg-[#111113] p-0.5 font-mono text-xs tabular-nums text-zinc-400"
+          className="absolute top-2 right-2 z-10 inline-flex rounded-md border border-[#222226] bg-[#111113]/90 p-0.5"
         >
-          {(['3D', '2D'] as const).map((mode) => {
-            const active = viewMode === mode;
-            return (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setViewMode(mode)}
-                className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
-                  active
-                    ? 'bg-[#FAFAFA] text-[#09090B]'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                {mode}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Contenedor del Cubo 3D (100% vacío en JSX) */}
-        <div className="relative mx-auto h-56 w-full max-w-[330px] sm:h-60">
-          <IsolatedTwistyHost ref={containerRef} hidden={viewMode !== '3D'} />
-
-          {viewMode === '2D' && (
-            <div className="absolute inset-0 flex items-center justify-center [&>div]:h-44 [&>div]:w-44">
-              <Cube2DPreview alg={effectiveAlg} stage={previewStageFor2D} />
-            </div>
-          )}
-
-          {viewMode === '3D' && !playerReady && (
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-center">
-              <span className="font-mono text-xs text-zinc-500">
-                {cdnTimedOut
-                  ? 'ERR_CDN · Verifica conexión a cdn.cubing.net'
-                  : 'INIT_WEBGL...'}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Barra Inferior de Parámetros de Cámara / Espejo / Máscara dentro del Viewport */}
-        <div
-          translate="no"
-          className="absolute right-2.5 bottom-2 left-2.5 z-10 flex items-center justify-between gap-1 font-mono text-[11px] tabular-nums"
-        >
-          <div className="flex items-center gap-1">
-            {viewMode === '3D' && (
-              <div className="inline-flex items-center rounded-md border border-[#222226] bg-[#111113] p-0.5">
-                {(['right', 'left', 'top'] as const).map((preset) => {
-                  const active = cameraPreset === preset;
-                  return (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setCameraPreset(preset)}
-                      title={`Cámara: ${CAMERA_PRESETS[preset].short}`}
-                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-                        active
-                          ? 'bg-zinc-800 text-[#FAFAFA]'
-                          : 'text-zinc-500 hover:text-zinc-300'
-                      }`}
-                    >
-                      {CAMERA_PRESETS[preset].short}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1">
+          {(['3D', '2D'] as const).map((mode) => (
             <button
+              key={mode}
               type="button"
-              onClick={handleToggleMirror}
-              title="Reflejar algoritmo Izquierda ↔ Derecha"
-              className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                isMirrored
-                  ? 'border-[#FAFAFA] bg-[#FAFAFA] text-[#09090B]'
-                  : 'border-[#222226] bg-[#111113] text-zinc-400 hover:bg-[#16161A] hover:text-zinc-200'
+              onClick={() => {
+                triggerHaptic('selection');
+                setViewMode(mode);
+              }}
+              className={`h-7 rounded px-2.5 font-mono text-[11px] font-medium transition-colors lg:h-6 lg:px-2 ${
+                viewMode === mode
+                  ? 'bg-[#FAFAFA] text-[#09090B]'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              <RefreshCw className="h-2.5 w-2.5" />
-              <span>L↔R</span>
+              {mode}
             </button>
+          ))}
+        </div>
 
-            {selection.altAlg && (
+        {/* Inferior izquierda: cámara */}
+        {viewMode === '3D' && (
+          <div
+            translate="no"
+            className="absolute bottom-2 left-2 z-10 inline-flex rounded-md border border-[#222226] bg-[#111113]/90 p-0.5"
+          >
+            {(['right', 'left', 'top'] as const).map((preset) => (
               <button
+                key={preset}
                 type="button"
-                onClick={() => setUseAltAlg((prev) => !prev)}
-                title="Alternar algoritmo secundario"
-                className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                  useAltAlg
-                    ? 'border-[#FAFAFA] bg-[#FAFAFA] text-[#09090B]'
-                    : 'border-[#222226] bg-[#111113] text-zinc-400 hover:bg-[#16161A] hover:text-zinc-200'
+                onClick={() => {
+                  triggerHaptic('selection');
+                  setCameraPreset(preset);
+                }}
+                aria-label={`Cámara ${CAMERA_PRESETS[preset].short}`}
+                className={`h-7 rounded px-2 font-mono text-[10px] font-medium transition-colors lg:h-6 ${
+                  cameraPreset === preset
+                    ? 'bg-zinc-800 text-[#FAFAFA]'
+                    : 'text-zinc-500 hover:text-zinc-300'
                 }`}
               >
-                ALT
+                {CAMERA_PRESETS[preset].short}
               </button>
-            )}
-
-            {selection.stickering !== 'full' && (
-              <button
-                type="button"
-                onClick={() => setForceFullStickering((prev) => !prev)}
-                title="Alternar máscara de etapa vs cubo completo"
-                className={`rounded-md border px-2 py-0.5 text-[10px] font-medium uppercase transition-colors ${
-                  forceFullStickering
-                    ? 'border-zinc-500 bg-zinc-800 text-[#FAFAFA]'
-                    : 'border-[#222226] bg-[#111113] text-zinc-400 hover:bg-[#16161A] hover:text-zinc-200'
-                }`}
-              >
-                {forceFullStickering ? 'FULL' : selection.stickering}
-              </button>
-            )}
+            ))}
           </div>
+        )}
+
+        {/* Inferior derecha: espejo / alternativo / máscara */}
+        <div translate="no" className="absolute right-2 bottom-2 z-10 flex gap-1">
+          <button
+            type="button"
+            onClick={handleToggleMirror}
+            aria-pressed={isMirrored}
+            title="Espejo izquierda ↔ derecha"
+            className={chipClass(isMirrored)}
+          >
+            L↔R
+          </button>
+          {selection.altAlg && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('selection');
+                setUseAltAlg((prev) => !prev);
+              }}
+              aria-pressed={useAltAlg}
+              title="Algoritmo alternativo"
+              className={chipClass(useAltAlg)}
+            >
+              ALT
+            </button>
+          )}
+          {selection.stickering !== 'full' && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('selection');
+                setForceFullStickering((prev) => !prev);
+              }}
+              aria-pressed={forceFullStickering}
+              title="Mostrar todos los colores"
+              className={chipClass(forceFullStickering)}
+            >
+              FULL
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Secuencia Interactiva Paso a Paso */}
-      <div className="border-b border-[#222226] bg-[#09090B] px-3.5 py-2.5">
-        <div className="mb-2 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-mono text-[11px] tabular-nums text-zinc-400">
-            <span className="uppercase tracking-wider text-zinc-500">SEQ</span>
-            <span translate="no" className="text-zinc-300">
-              {String(Math.min(completedMoves, moves.length)).padStart(2, '0')}/
-              {String(moves.length).padStart(2, '0')} HTM
-            </span>
-            {isMirrored && (
-              <span className="rounded border border-[#222226] bg-[#16161A] px-1.5 py-0.5 text-[10px] text-[#FAFAFA]">
-                MIRROR
-              </span>
-            )}
-          </div>
+      {/* Guía Ergonómica Técnica: Agarre Inicial y AUF */}
+      {(selection.grip || selection.auf) && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-[#222226] bg-[#0C0C0E] px-3 py-1.5 font-mono text-[11px] tabular-nums text-zinc-400">
+          {selection.grip && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-zinc-600">AGARRE:</span>
+              <span className="text-zinc-200">{selection.grip}</span>
+            </div>
+          )}
+          {selection.auf && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-zinc-600">AUF:</span>
+              <span className="text-zinc-200">{selection.auf}</span>
+            </div>
+          )}
+        </div>
+      )}
 
-          <button
-            type="button"
-            onClick={handleCopyAlg}
-            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] text-zinc-400 transition-colors hover:bg-[#16161A] hover:text-[#FAFAFA]"
-          >
-            {copied ? (
-              <>
-                <Check className="h-3 w-3 text-[#10B981]" />
-                <span className="text-[#10B981]">COPIADO</span>
-              </>
-            ) : (
-              <>
-                <Copy className="h-3 w-3" />
-                <span>COPIAR</span>
-              </>
-            )}
-          </button>
+      {/* Secuencia: scroll horizontal en móvil, multilínea en desktop */}
+      <div className="border-b border-[#222226] bg-[#09090B] py-2.5">
+        <div className="mb-1.5 flex items-center justify-between px-3 font-mono text-[11px] tabular-nums text-zinc-500">
+          <span>Secuencia</span>
+          <span translate="no" className="text-zinc-400">
+            {Math.min(completedMoves, moves.length)}/{moves.length}
+          </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1" translate="no">
+        <div
+          ref={sequenceRef}
+          translate="no"
+          className="no-scrollbar relative flex gap-1 overflow-x-auto scroll-smooth px-3 lg:flex-wrap lg:overflow-visible"
+        >
           {moves.map((move, idx) => {
             const isActive = idx === activeMoveIndex;
             const isDone = idx < completedMoves && !isActive;
@@ -679,15 +679,18 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
             return (
               <button
                 key={`${move}-${idx}`}
+                ref={(el) => {
+                  moveButtonRefs.current[idx] = el;
+                }}
                 type="button"
                 onClick={() => handleJumpToMove(idx)}
-                title={`Paso ${idx + 1}: ${move}`}
-                className={`min-w-[2rem] rounded-md border px-1.5 py-1 font-mono text-xs font-semibold tabular-nums transition-colors ${
+                aria-label={`Ir al paso ${idx + 1}: ${move}`}
+                className={`h-9 min-w-[2.5rem] shrink-0 rounded-md border px-2 font-mono text-sm font-semibold tabular-nums transition-colors lg:h-8 lg:min-w-[2.125rem] lg:text-xs ${
                   isActive
                     ? 'border-[#FAFAFA] bg-[#FAFAFA] text-[#09090B]'
                     : isDone
                     ? 'border-[#10B981]/40 bg-[#10B981]/10 text-[#10B981]'
-                    : 'border-[#222226] bg-[#111113] text-zinc-300 hover:border-zinc-700 hover:bg-[#16161A]'
+                    : 'border-[#222226] bg-[#111113] text-zinc-300 hover:border-zinc-700'
                 }`}
               >
                 {move}
@@ -697,27 +700,29 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
         </div>
       </div>
 
-      {/* Controlador de Hardware + Velocidad Segmented + Badges <kbd> */}
-      <div className="border-b border-[#222226] px-3.5 py-3">
+      {/* Controles de reproducción + velocidad */}
+      <div className="space-y-2.5 border-b border-[#222226] px-3 py-3">
         <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={handleReset}
             disabled={!playerReady}
-            title="Reiniciar al estado inicial (R)"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-zinc-800 bg-[#09090B] text-zinc-300 transition-colors hover:bg-[#16161A] hover:text-[#FAFAFA] disabled:opacity-35"
+            aria-label="Reiniciar"
+            title="Reiniciar (R)"
+            className={CTRL_BTN}
           >
-            <RotateCcw className="h-3.5 w-3.5" />
+            <RotateCcw className="h-4 w-4" />
           </button>
 
           <button
             type="button"
             onClick={handleStepBackward}
             disabled={!playerReady || atStart}
+            aria-label="Paso anterior"
             title="Paso anterior (←)"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-zinc-800 bg-[#09090B] text-zinc-300 transition-colors hover:bg-[#16161A] hover:text-[#FAFAFA] disabled:cursor-not-allowed disabled:opacity-35"
+            className={CTRL_BTN}
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
 
           <button
@@ -725,17 +730,17 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
             onClick={handleTogglePlay}
             disabled={!playerReady}
             title="Reproducir / Pausar (Space)"
-            className="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-md bg-[#FAFAFA] px-3 text-xs font-semibold text-[#09090B] transition-colors hover:bg-zinc-200 disabled:opacity-40"
+            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-md bg-[#FAFAFA] px-3 text-sm font-semibold text-[#09090B] transition-colors hover:bg-zinc-200 active:bg-zinc-300 disabled:opacity-40 lg:h-9 lg:text-xs"
           >
             {isPlaying ? (
               <>
-                <Pause className="h-3.5 w-3.5 fill-current" />
-                <span>PAUSA</span>
+                <Pause className="h-4 w-4 fill-current" />
+                <span>Pausa</span>
               </>
             ) : (
               <>
-                <Play className="h-3.5 w-3.5 fill-current" />
-                <span>{atEnd ? 'REPETIR' : 'PLAY'}</span>
+                <Play className="h-4 w-4 fill-current" />
+                <span>{atEnd ? 'Repetir' : 'Play'}</span>
               </>
             )}
           </button>
@@ -744,93 +749,114 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection }) => {
             type="button"
             onClick={handleStepForward}
             disabled={!playerReady || atEnd}
-            title="Siguiente paso (→)"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-zinc-800 bg-[#09090B] text-zinc-300 transition-colors hover:bg-[#16161A] hover:text-[#FAFAFA] disabled:cursor-not-allowed disabled:opacity-35"
+            aria-label="Paso siguiente"
+            title="Paso siguiente (→)"
+            className={CTRL_BTN}
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-5 w-5" />
           </button>
 
           <button
             type="button"
             onClick={handleJumpToEnd}
             disabled={!playerReady}
-            title="Saltar al estado resuelto"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-zinc-800 bg-[#09090B] text-zinc-300 transition-colors hover:bg-[#16161A] hover:text-[#FAFAFA] disabled:opacity-35"
+            aria-label="Ir al final"
+            title="Ir al final"
+            className={CTRL_BTN}
           >
-            <SkipForward className="h-3.5 w-3.5" />
+            <SkipForward className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Barra de Velocidad Segmented Control */}
-        <div className="mt-2.5 flex items-center justify-between gap-2">
-          <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-500">
-            TEMPO
-          </span>
-          <div
-            translate="no"
-            className="grid flex-1 grid-cols-4 rounded-md border border-zinc-800 bg-[#09090B] p-0.5"
-          >
-            {SPEED_SEGMENTS.map((seg) => {
-              const active = Math.abs(tempoScale - seg.value) < 0.03;
-              return (
-                <button
-                  key={seg.value}
-                  type="button"
-                  onClick={() => setTempoScale(seg.value)}
-                  className={`rounded py-1 font-mono text-xs font-medium tabular-nums transition-colors ${
-                    active
-                      ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
-                      : 'text-zinc-400 hover:text-zinc-200'
-                  }`}
-                >
-                  {seg.label}
-                </button>
-              );
-            })}
-          </div>
+        <div
+          translate="no"
+          role="radiogroup"
+          aria-label="Velocidad"
+          className="grid grid-cols-4 rounded-md border border-zinc-800 bg-[#09090B] p-0.5"
+        >
+          {SPEED_SEGMENTS.map((seg) => {
+            const active = Math.abs(tempoScale - seg.value) < 0.03;
+            return (
+              <button
+                key={seg.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => {
+                  triggerHaptic('selection');
+                  setTempoScale(seg.value);
+                }}
+                className={`h-8 rounded font-mono text-xs font-medium tabular-nums transition-colors lg:h-7 ${
+                  active
+                    ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                {seg.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Badges <kbd> de Atajos de Teclado */}
-        <div className="mt-2.5 hidden flex-wrap items-center justify-between gap-1.5 border-t border-[#222226] pt-2 text-[11px] text-zinc-500 sm:flex">
-          <span className="inline-flex items-center gap-1">
-            <kbd className="rounded border border-zinc-800 bg-[#09090B] px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-zinc-300">
-              Space
-            </kbd>
-            <span>Play</span>
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <kbd className="rounded border border-zinc-800 bg-[#09090B] px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-zinc-300">
-              ←
-            </kbd>
-            <kbd className="rounded border border-zinc-800 bg-[#09090B] px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-zinc-300">
-              →
-            </kbd>
-            <span>Paso</span>
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <kbd className="rounded border border-zinc-800 bg-[#09090B] px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-zinc-300">
-              R
-            </kbd>
-            <span>Reset</span>
-          </span>
+        {/* Atajos de teclado: solo en pantallas con teclado */}
+        <div className="hidden items-center justify-center gap-4 text-[11px] text-zinc-500 lg:flex">
+          {[
+            { keys: ['Space'], label: 'Play' },
+            { keys: ['←', '→'], label: 'Paso' },
+            { keys: ['R'], label: 'Reset' },
+          ].map((hint) => (
+            <span key={hint.label} className="inline-flex items-center gap-1">
+              {hint.keys.map((k) => (
+                <kbd
+                  key={k}
+                  className="rounded border border-zinc-800 bg-[#09090B] px-1.5 py-0.5 font-mono text-[10px] text-zinc-300"
+                >
+                  {k}
+                </kbd>
+              ))}
+              <span>{hint.label}</span>
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* Ficha Técnica: Reconocimiento y Ejecución (sin íconos decorativos) */}
-      <div className="divide-y divide-[#222226] text-xs leading-relaxed">
-        <div className="px-3.5 py-2.5">
-          <div className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-            {selection.stage === 'Notation' ? 'VECTOR DE GIRO' : 'RECONOCIMIENTO'}
-          </div>
-          <p className="mt-1 text-zinc-300">{selection.recognition}</p>
-        </div>
+      {/* Detalles colapsables (abiertos por defecto en desktop) */}
+      <div>
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic('selection');
+            setShowDetails((prev) => !prev);
+          }}
+          aria-expanded={showDetails}
+          className="flex h-11 w-full items-center justify-between px-3 text-left lg:h-10"
+        >
+          <span className="text-xs font-medium text-zinc-300">
+            {isNotation ? 'Cómo se hace' : 'Reconocimiento y ejecución'}
+          </span>
+          <ChevronDown
+            className={`h-4 w-4 text-zinc-500 transition-transform ${
+              showDetails ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
 
-        <div className="px-3.5 py-2.5">
-          <div className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-            {selection.stage === 'Notation' ? 'ERGONOMÍA' : 'EJECUCIÓN / FINGERTRICKS'}
-          </div>
-          <p className="mt-1 text-zinc-300">{selection.explanation}</p>
-        </div>
+        {showDetails && (
+          <dl className="space-y-2.5 border-t border-[#222226] px-3 py-3 text-[13px] leading-relaxed lg:text-xs">
+            <div>
+              <dt className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                {isNotation ? 'Movimiento' : 'Reconocer'}
+              </dt>
+              <dd className="mt-0.5 text-zinc-300">{selection.recognition}</dd>
+            </div>
+            <div>
+              <dt className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                {isNotation ? 'Dedos' : 'Ejecutar'}
+              </dt>
+              <dd className="mt-0.5 text-zinc-300">{selection.explanation}</dd>
+            </div>
+          </dl>
+        )}
       </div>
     </div>
   );

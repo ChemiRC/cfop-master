@@ -33,6 +33,12 @@ export interface CfopCase {
   explanation: string;
   /** Named triggers present in this algorithm */
   triggers?: string[];
+  /** Visual recognition tags (e.g. 'Faros', 'Barra 1×3', 'Bloque 2×2', 'Diagonal', 'Cruz') */
+  tags?: string[];
+  /** Recommended starting grip (e.g. 'Home grip (pulgares en F)', 'Regrip pulgar en U') */
+  grip?: string;
+  /** Frequent AUF (Adjust Upper Face) notes */
+  auf?: string;
 }
 
 export interface ActiveSelection {
@@ -47,6 +53,9 @@ export interface ActiveSelection {
   setupAnchor: 'start' | 'end';
   recognition: string;
   explanation: string;
+  tags?: string[];
+  grip?: string;
+  auf?: string;
   autoPlayNonce?: number;
 }
 

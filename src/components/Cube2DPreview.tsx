@@ -60,7 +60,7 @@ export const Cube2DPreview: React.FC<Cube2DPreviewProps> = React.memo(
       return (
         <div
           aria-hidden="true"
-          className="flex h-[76px] w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#222226] bg-[#09090B] p-1.5 sm:h-20 sm:w-20"
+          className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#222226] bg-[#09090B] p-1.5 sm:h-20 sm:w-20"
         >
           <svg
             viewBox="0 0 98 98"
@@ -163,7 +163,7 @@ export const Cube2DPreview: React.FC<Cube2DPreviewProps> = React.memo(
     return (
       <div
         aria-hidden="true"
-        className="flex h-[76px] w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#222226] bg-[#09090B] p-1 sm:h-20 sm:w-20"
+        className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#222226] bg-[#09090B] p-1 sm:h-20 sm:w-20"
       >
         <svg
           viewBox="0 0 100 100"

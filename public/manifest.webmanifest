@@ -1,0 +1,18 @@
+{
+  "name": "CFOP Master — Algoritmos Rubik 3D",
+  "short_name": "CFOP Master",
+  "description": "Herramienta técnica de referencia visual e interactiva 3D para el método CFOP y notación WCA.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#09090B",
+  "theme_color": "#09090B",
+  "icons": [
+    {
+      "src": "/cube-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
