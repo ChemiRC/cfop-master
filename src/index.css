@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+    background-color: #09090b;
+  }
+
+  body {
+    background-color: #09090b;
+    background-image: radial-gradient(#27272a 1px, transparent 1px);
+    background-size: 24px 24px;
+    color: #f4f4f5;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+/* CRÍTICO: twisty-player debe mantener display: grid para que su .wrapper interno en Shadow DOM no colapse a 0px */
+twisty-player {
+  display: grid;
+  width: 100%;
+  height: 100%;
+}
+
+/* Scrollbar técnico minimalista */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #09090b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
