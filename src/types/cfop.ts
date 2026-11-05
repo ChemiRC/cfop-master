@@ -25,8 +25,12 @@ export interface CfopCase {
   subcategory: string;
   /** Clean WCA algorithm string passed directly to <twisty-player> */
   alg: string;
-  /** Optional alternative or mirror algorithm */
+  /** Optional alternative algorithm (legacy single string) */
   altAlg?: string;
+  /** Optional list of alternative algorithms (e.g. R U variant vs M U variant) */
+  altAlgs?: string[];
+  /** True if part of 2-Look OLL or 2-Look PLL subset */
+  isTwoLook?: boolean;
   /** Recognition cue: patterns, headlights, blocks, bars */
   recognition: string;
   /** Clear Spanish explanation & fingertrick advice */
@@ -48,6 +52,8 @@ export interface ActiveSelection {
   subtitle: string;
   alg: string;
   altAlg?: string;
+  altAlgs?: string[];
+  isTwoLook?: boolean;
   stage: CfopStage;
   stickering: StickeringType;
   setupAnchor: 'start' | 'end';

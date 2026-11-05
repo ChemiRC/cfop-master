@@ -7,14 +7,17 @@ import {
   type TriggerDemo,
 } from './data/cfopData';
 import { CfopCatalogModule } from './components/CfopCatalogModule';
+import { Cube2DPreview } from './components/Cube2DPreview';
 import { CubeViewer } from './components/CubeViewer';
 import { NotationModule } from './components/NotationModule';
 import type {
   ActiveSelection,
   CfopCase,
   CfopStage,
+  LearningStage,
   NotationMove,
 } from './types/cfop';
+import { mirrorAlgLR } from './utils/algHelpers';
 import { triggerHaptic } from './utils/haptics';
 
 const DESKTOP_QUERY = '(min-width: 1024px)';
@@ -28,6 +31,8 @@ function caseToSelection(c: CfopCase, autoPlayNonce?: number): ActiveSelection {
     subtitle: `${c.stage} · ${c.subcategory}`,
     alg: c.alg,
     altAlg: c.altAlg,
+    altAlgs: c.altAlgs,
+    isTwoLook: c.isTwoLook,
     stage: c.stage,
     stickering: c.stage,
     setupAnchor: 'end',
@@ -56,16 +61,23 @@ function moveToSelection(m: NotationMove, nonce: number): ActiveSelection {
   };
 }
 
-const NAV_ITEMS: Array<{ id: CfopStage; label: string; dotColor?: string }> = [
+const NAV_ITEMS: Array<{
+  id: CfopStage;
+  label: string;
+  count?: number;
+  dotColor?: string;
+}> = [
   { id: 'Notation', label: 'Notación' },
-  { id: 'Cross', label: 'Cross', dotColor: 'bg-[#F4F4F5]' },
-  { id: 'F2L', label: 'F2L', dotColor: 'bg-[#3B82F6]' },
-  { id: 'OLL', label: 'OLL', dotColor: 'bg-[#EAB308]' },
-  { id: 'PLL', label: 'PLL', dotColor: 'bg-[#EF4444]' },
+  { id: 'Cross', label: 'Cross', count: 6, dotColor: 'bg-[#F4F4F5]' },
+  { id: 'F2L', label: 'F2L', count: 41, dotColor: 'bg-[#3B82F6]' },
+  { id: 'OLL', label: 'OLL', count: 57, dotColor: 'bg-[#EAB308]' },
+  { id: 'PLL', label: 'PLL', count: 21, dotColor: 'bg-[#EF4444]' },
 ];
 
 function isDesktop(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia(DESKTOP_QUERY).matches;
+  return (
+    typeof window !== 'undefined' && window.matchMedia(DESKTOP_QUERY).matches
+  );
 }
 
 export const App: React.FC = () => {
@@ -100,7 +112,8 @@ export const App: React.FC = () => {
   }, []);
 
   const [selection, setSelection] = useState<ActiveSelection>(() => {
-    const initialCase = CFOP_CASES.find((c) => c.stage === 'F2L') ?? CFOP_CASES[0];
+    const initialCase =
+      CFOP_CASES.find((c) => c.stage === 'F2L') ?? CFOP_CASES[0];
     return caseToSelection(initialCase);
   });
 
@@ -143,7 +156,8 @@ export const App: React.FC = () => {
         stickering: 'full',
         setupAnchor: 'end',
         recognition: trig.description,
-        explanation: 'Practícalo a 0.5x y sube la velocidad cuando salga sin pausas.',
+        explanation:
+          'Practícalo a 0.5x y sube la velocidad cuando salga sin pausas.',
         autoPlayNonce: Date.now(),
       });
       openSheetOnMobile();
@@ -209,9 +223,16 @@ export const App: React.FC = () => {
       return `${idx}/${ids.length}`;
     }
     const stageCases = CFOP_CASES.filter((c) => c.stage === activeTab);
-    const idx = Math.max(0, stageCases.findIndex((c) => c.id === selection.id)) + 1;
-    return `${idx}/${stageCases.length}`;
+    const idx =
+      Math.max(0, stageCases.findIndex((c) => c.id === selection.id)) + 1;
+    return `${idx}/${stageCases.length} ${activeTab}`;
   }, [activeTab, selection.id]);
+
+  const dockPreviewStage: LearningStage =
+    selection.stage === 'Notation' ? 'F2L' : selection.stage;
+  const dockDisplayAlg = isLeftyMode
+    ? mirrorAlgLR(selection.alg)
+    : selection.alg;
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col text-zinc-100">
@@ -258,9 +279,20 @@ export const App: React.FC = () => {
                   }`}
                 >
                   {item.dotColor && (
-                    <span className={`h-1.5 w-1.5 rounded-full ${item.dotColor}`} />
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${item.dotColor}`}
+                    />
                   )}
                   <span>{item.label}</span>
+                  {item.count !== undefined && (
+                    <span
+                      className={`font-mono text-[10px] tabular-nums ${
+                        isActive ? 'text-zinc-700' : 'text-zinc-500'
+                      }`}
+                    >
+                      {item.count}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -299,8 +331,9 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="px-safe pb-dock mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 pt-4 sm:px-6 sm:pt-5 lg:flex-row lg:items-start">
-        <div className="min-w-0 flex-1">
+      {/* Arquitectura Split-Screen 12 columnas en Desktop (7 izq / 5 der) */}
+      <main className="px-safe pb-dock mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-5 pt-4 sm:px-6 sm:pt-5 lg:grid-cols-12 lg:items-start lg:gap-6">
+        <div className="min-w-0 lg:col-span-7">
           {activeTab === 'Notation' ? (
             <NotationModule
               selectedId={selection.id}
@@ -321,12 +354,12 @@ export const App: React.FC = () => {
         <div
           onClick={() => setIsSheetOpen(false)}
           aria-hidden="true"
-          className={`fixed inset-0 z-40 bg-black/70 transition-opacity duration-200 lg:hidden ${
+          className={`fixed inset-0 z-40 bg-black/75 transition-opacity duration-200 lg:hidden ${
             isSheetOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
           }`}
         />
 
-        {/* Única instancia WebGL: sidebar en desktop / panel inferior en móvil */}
+        {/* Derecha (5 columnas en Desktop sticky top-16 / Sheet reproductor ergonómico en móvil) */}
         <aside
           aria-label="Visor 3D"
           style={
@@ -334,7 +367,7 @@ export const App: React.FC = () => {
               ? { transform: `translateY(${dragOffset}px)`, transition: 'none' }
               : undefined
           }
-          className={`lg:static lg:z-auto lg:block lg:w-[380px] lg:shrink-0 xl:w-[400px] max-lg:max-h-sheet max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-50 max-lg:flex max-lg:flex-col max-lg:rounded-t-xl max-lg:border-t max-lg:border-[#222226] max-lg:bg-[#09090B] max-lg:transition-transform max-lg:duration-300 max-lg:ease-out ${
+          className={`lg:col-span-5 lg:static lg:z-auto lg:block max-lg:max-h-sheet max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-50 max-lg:flex max-lg:flex-col max-lg:rounded-t-xl max-lg:border-t max-lg:border-[#222226] max-lg:bg-[#09090B] max-lg:transition-transform max-lg:duration-300 max-lg:ease-out ${
             isSheetOpen
               ? 'max-lg:translate-y-0'
               : 'max-lg:pointer-events-none max-lg:translate-y-full'
@@ -354,14 +387,14 @@ export const App: React.FC = () => {
                 triggerHaptic('light');
                 setIsSheetOpen(false);
               }}
-              aria-label="Cerrar visor"
+              aria-label="Minimizar visor"
               className="absolute top-1/2 right-2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-zinc-500 hover:text-zinc-200"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="max-lg:pb-safe-2 max-lg:min-h-0 max-lg:flex-1 max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:px-2 lg:sticky lg:top-[72px]">
+          <div className="no-scrollbar max-lg:pb-safe-2 max-lg:min-h-0 max-lg:flex-1 max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:px-2 lg:sticky lg:top-16 lg:max-h-[calc(100vh-4.5rem)] lg:overflow-y-auto">
             <CubeViewer selection={selection} isLeftyGlobal={isLeftyMode} />
           </div>
         </aside>
@@ -369,12 +402,12 @@ export const App: React.FC = () => {
 
       <footer className="hidden border-t border-[#222226] py-4 lg:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 font-mono text-[11px] text-zinc-600">
-          <span>CFOP Master</span>
+          <span>CFOP Master · 125 Algoritmos WCA (Cross, 41 F2L, 57 OLL, 21 PLL)</span>
           <span>Notación WCA · cubing.js · PWA</span>
         </div>
       </footer>
 
-      {/* Dock inferior móvil: mini reproductor + selector de etapas */}
+      {/* Sticky Bottom Dock móvil (Zona del Pulgar): mini reproductor + selector de etapas */}
       <div className="pb-safe-2 fixed inset-x-0 bottom-0 z-30 border-t border-[#222226] bg-[#09090B]/95 px-3 pt-2 backdrop-blur-md lg:hidden">
         <div className="flex items-center gap-2">
           <button
@@ -383,10 +416,13 @@ export const App: React.FC = () => {
               triggerHaptic('light');
               setIsSheetOpen(true);
             }}
-            className="flex h-12 min-w-0 flex-1 items-center gap-3 rounded-lg border border-[#222226] bg-[#111113] pr-1.5 pl-3 text-left active:bg-[#16161A]"
+            className="flex h-13 min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-[#222226] bg-[#111113] p-1.5 text-left active:bg-[#16161A]"
           >
+            <div className="[&>div]:h-10 [&>div]:w-10 [&>div]:p-0.5">
+              <Cube2DPreview alg={dockDisplayAlg} stage={dockPreviewStage} />
+            </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-baseline gap-2">
+              <div className="flex items-baseline gap-1.5">
                 <span
                   translate="no"
                   className="shrink-0 font-mono text-[11px] font-semibold tabular-nums text-[#FAFAFA]"
@@ -399,9 +435,9 @@ export const App: React.FC = () => {
               </div>
               <p
                 translate="no"
-                className="truncate font-mono text-[11px] tabular-nums text-zinc-500"
+                className="truncate font-mono text-[11px] tabular-nums text-zinc-400"
               >
-                {selection.alg}
+                {dockDisplayAlg}
               </p>
             </div>
             <span className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md bg-[#FAFAFA] px-2.5 font-mono text-xs font-semibold text-[#09090B]">
@@ -414,7 +450,7 @@ export const App: React.FC = () => {
             type="button"
             onClick={toggleLeftyMode}
             title={isLeftyMode ? 'Modo Zurdo activo' : 'Activar Modo Zurdo'}
-            className={`flex h-12 w-11 shrink-0 flex-col items-center justify-center rounded-lg border font-mono text-[10px] font-medium transition-colors ${
+            className={`flex h-13 w-11 shrink-0 flex-col items-center justify-center rounded-lg border font-mono text-[10px] font-medium transition-colors ${
               isLeftyMode
                 ? 'border-[#3B82F6] bg-[#3B82F6]/15 text-[#3B82F6]'
                 : 'border-[#222226] bg-[#111113] text-zinc-400'
@@ -437,7 +473,7 @@ export const App: React.FC = () => {
                 type="button"
                 onClick={() => handleTabChange(item.id)}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex h-10 items-center justify-center gap-1 rounded-md text-[11px] font-medium transition-colors ${
+                className={`flex h-11 items-center justify-center gap-1 rounded-md text-[11px] font-medium transition-colors ${
                   isActive
                     ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
                     : 'text-zinc-400'

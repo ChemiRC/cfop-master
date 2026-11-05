@@ -11,6 +11,15 @@ export interface StickerCell {
   masked: boolean;
 }
 
+export interface PllArrow {
+  fromRow: number;
+  fromCol: number;
+  toRow: number;
+  toCol: number;
+  bidirectional: boolean;
+  isCorner: boolean;
+}
+
 interface Vec3 {
   x: number;
   y: number;
@@ -38,6 +47,8 @@ const FACE_COLORS: Record<FaceCode, string> = {
   L: '#F97316', // Naranja Speedcube
 };
 
+const OLL_YELLOW = '#EAB308';
+
 const DIM_FACE_COLORS: Record<FaceCode, string> = {
   U: '#71717A',
   D: '#854D0E',
@@ -47,7 +58,7 @@ const DIM_FACE_COLORS: Record<FaceCode, string> = {
   L: '#7C2D12',
 };
 
-const IGNORED_COLOR = '#222226';
+const IGNORED_COLOR = '#1F1F24';
 
 function createSolvedCube(): CubieState[] {
   const cubies: CubieState[] = [];
@@ -109,24 +120,17 @@ function createSolvedCube(): CubieState[] {
   return cubies;
 }
 
-function rotateVec(
-  v: Vec3,
-  axis: 'x' | 'y' | 'z',
-  dir: 1 | -1
-): Vec3 {
+function rotateVec(v: Vec3, axis: 'x' | 'y' | 'z', dir: 1 | -1): Vec3 {
   if (axis === 'x') {
-    // dir = 1 matches R: (y, z) -> (z, -y)
     return dir === 1
       ? { x: v.x, y: v.z, z: -v.y }
       : { x: v.x, y: -v.z, z: v.y };
   }
   if (axis === 'y') {
-    // dir = 1 matches U: (x, z) -> (-z, x)
     return dir === 1
       ? { x: -v.z, y: v.y, z: v.x }
       : { x: v.z, y: v.y, z: -v.x };
   }
-  // axis === 'z': dir = 1 matches F: (x, y) -> (y, -x)
   return dir === 1
     ? { x: v.y, y: -v.x, z: v.z }
     : { x: -v.y, y: v.x, z: v.z };
@@ -258,6 +262,45 @@ function invertToken(token: string): string {
   return mod === "'" ? base : `${base}'`;
 }
 
+/**
+ * Si un algoritmo incluye giros wide/slice que rotan los centros, reorienta
+ * el cubo completo para que el centro U quede arriba (0,1,0) y F al frente (0,0,1).
+ */
+function normalizeCubeOrientation(cubies: CubieState[]): void {
+  const findCenterPos = (hx: number, hy: number, hz: number): Vec3 | undefined =>
+    cubies.find(
+      (c) => c.homePos.x === hx && c.homePos.y === hy && c.homePos.z === hz
+    )?.pos;
+
+  const uPos = findCenterPos(0, 1, 0);
+  if (uPos) {
+    if (uPos.y === -1) {
+      applySingleQuantumMove(cubies, 'x', false);
+      applySingleQuantumMove(cubies, 'x', false);
+    } else if (uPos.z === 1) {
+      applySingleQuantumMove(cubies, 'x', false);
+    } else if (uPos.z === -1) {
+      applySingleQuantumMove(cubies, 'x', true);
+    } else if (uPos.x === 1) {
+      applySingleQuantumMove(cubies, 'z', true);
+    } else if (uPos.x === -1) {
+      applySingleQuantumMove(cubies, 'z', false);
+    }
+  }
+
+  const fPos = findCenterPos(0, 0, 1);
+  if (fPos) {
+    if (fPos.z === -1) {
+      applySingleQuantumMove(cubies, 'y', false);
+      applySingleQuantumMove(cubies, 'y', false);
+    } else if (fPos.x === 1) {
+      applySingleQuantumMove(cubies, 'y', false);
+    } else if (fPos.x === -1) {
+      applySingleQuantumMove(cubies, 'y', true);
+    }
+  }
+}
+
 function getStickerColorForStage(
   cubie: CubieState,
   sticker: StickerState,
@@ -274,7 +317,7 @@ function getStickerColorForStage(
       if (sticker.isPrimaryU) {
         return {
           face: sticker.homeFace,
-          color: FACE_COLORS[sticker.homeFace],
+          color: OLL_YELLOW,
           masked: false,
         };
       }
@@ -292,7 +335,7 @@ function getStickerColorForStage(
       if (sticker.isPrimaryU) {
         return {
           face: sticker.homeFace,
-          color: '#CBD5E1',
+          color: OLL_YELLOW,
           masked: false,
         };
       }
@@ -311,10 +354,14 @@ function getStickerColorForStage(
 
   if (stage === 'F2L') {
     if (isF2LPiece) {
+      const isTargetFRPair =
+        homePos.x === 1 && homePos.z === 1 && homePos.y <= 0;
       return {
         face: sticker.homeFace,
-        color: FACE_COLORS[sticker.homeFace],
-        masked: false,
+        color: isTargetFRPair
+          ? FACE_COLORS[sticker.homeFace]
+          : FACE_COLORS[sticker.homeFace],
+        masked: !isTargetFRPair,
       };
     }
     return { face: sticker.homeFace, color: IGNORED_COLOR, masked: true };
@@ -340,6 +387,71 @@ function getStickerColorForStage(
   return { face: sticker.homeFace, color: IGNORED_COLOR, masked: true };
 }
 
+function computePllArrows(cubies: CubieState[]): PllArrow[] {
+  const rawMoves: Array<{
+    fromRow: number;
+    fromCol: number;
+    toRow: number;
+    toCol: number;
+    isCorner: boolean;
+  }> = [];
+
+  for (const cubie of cubies) {
+    if (cubie.pos.y !== 1 || cubie.homePos.y !== 1) continue;
+    const fromRow = cubie.pos.z + 1;
+    const fromCol = cubie.pos.x + 1;
+    const toRow = cubie.homePos.z + 1;
+    const toCol = cubie.homePos.x + 1;
+
+    if (fromRow === toRow && fromCol === toCol) continue;
+
+    const isCorner = Math.abs(cubie.pos.x) === 1 && Math.abs(cubie.pos.z) === 1;
+    rawMoves.push({ fromRow, fromCol, toRow, toCol, isCorner });
+  }
+
+  const used = new Set<number>();
+  const arrows: PllArrow[] = [];
+
+  for (let i = 0; i < rawMoves.length; i++) {
+    if (used.has(i)) continue;
+    const m = rawMoves[i];
+    const reverseIdx = rawMoves.findIndex(
+      (other, idx) =>
+        idx > i &&
+        !used.has(idx) &&
+        other.fromRow === m.toRow &&
+        other.fromCol === m.toCol &&
+        other.toRow === m.fromRow &&
+        other.toCol === m.fromCol
+    );
+
+    if (reverseIdx !== -1) {
+      used.add(i);
+      used.add(reverseIdx);
+      arrows.push({
+        fromRow: m.fromRow,
+        fromCol: m.fromCol,
+        toRow: m.toRow,
+        toCol: m.toCol,
+        bidirectional: true,
+        isCorner: m.isCorner,
+      });
+    } else {
+      used.add(i);
+      arrows.push({
+        fromRow: m.fromRow,
+        fromCol: m.fromCol,
+        toRow: m.toRow,
+        toCol: m.toCol,
+        bidirectional: false,
+        isCorner: m.isCorner,
+      });
+    }
+  }
+
+  return arrows;
+}
+
 export interface SimulatedCaseView {
   /** 3x3 top face U: rows z = -1..1 (back to front), cols x = -1..1 (left to right) */
   topGrid: StickerCell[][];
@@ -355,6 +467,8 @@ export interface SimulatedCaseView {
   frontGrid: StickerCell[][];
   /** Full 3x3 right face R: rows y = 1..-1 (top to bottom), cols z = 1..-1 (front to back) */
   rightGrid: StickerCell[][];
+  /** Exact permutation vectors for PLL 2D diagram */
+  pllArrows: PllArrow[];
 }
 
 /**
@@ -380,6 +494,8 @@ export function simulateCasePreState(
       applySingleQuantumMove(cubies, base, mod === "'");
     }
   }
+
+  normalizeCubeOrientation(cubies);
 
   const fallbackCell: StickerCell = {
     face: 'U',
@@ -431,6 +547,8 @@ export function simulateCasePreState(
     [1, 0, -1].map((z) => findSticker(1, y, z, 1, 0, 0))
   );
 
+  const pllArrows = stage === 'PLL' ? computePllArrows(cubies) : [];
+
   return {
     topGrid,
     backTopRow,
@@ -439,5 +557,6 @@ export function simulateCasePreState(
     rightTopRow,
     frontGrid,
     rightGrid,
+    pllArrows,
   };
 }

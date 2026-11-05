@@ -1,7 +1,15 @@
 export interface TriggerSegment {
   type: 'trigger' | 'moves';
   moves: string[];
+  startIndex: number;
   triggerName?: string;
+}
+
+export interface MoveVisualStyle {
+  isPrime: boolean;
+  isDouble: boolean;
+  isWideOrRotation: boolean;
+  isRotation: boolean;
 }
 
 interface TriggerPattern {
@@ -10,6 +18,14 @@ interface TriggerPattern {
 }
 
 const TRIGGER_PATTERNS: TriggerPattern[] = [
+  {
+    name: 'Sune',
+    sequence: ['R', 'U', "R'", 'U', 'R', 'U2', "R'"],
+  },
+  {
+    name: 'Antisune',
+    sequence: ['R', 'U2', "R'", "U'", 'R', "U'", "R'"],
+  },
   {
     name: 'Sexy Move',
     sequence: ['R', 'U', "R'", "U'"],
@@ -35,16 +51,16 @@ const TRIGGER_PATTERNS: TriggerPattern[] = [
     sequence: ['F', "R'", "F'", 'R'],
   },
   {
-    name: 'Sune',
-    sequence: ['R', 'U', "R'", 'U', 'R', 'U2', "R'"],
+    name: 'Insert (R U\' R\')',
+    sequence: ['R', "U'", "R'"],
   },
   {
-    name: 'Insert R',
+    name: 'Insert (R U R\')',
     sequence: ['R', 'U', "R'"],
   },
   {
-    name: 'Extract R',
-    sequence: ['R', "U'", "R'"],
+    name: 'Insert F',
+    sequence: ["F'", "U'", 'F'],
   },
 ];
 
@@ -64,6 +80,27 @@ export function countAlgMoves(alg: string): number {
   return splitAlgMoves(alg).length;
 }
 
+export function classifyMoveToken(move: string): MoveVisualStyle {
+  const m = move.match(/^([RLUDFBrludfbMESxyz])(2|')?$/);
+  const base = m ? m[1] : move[0] ?? '';
+  const mod = m ? m[2] ?? '' : '';
+  const isRotation = base === 'x' || base === 'y' || base === 'z';
+  const isWide =
+    base === 'r' ||
+    base === 'l' ||
+    base === 'u' ||
+    base === 'd' ||
+    base === 'f' ||
+    base === 'b';
+
+  return {
+    isPrime: mod === "'",
+    isDouble: mod === '2',
+    isWideOrRotation: isWide || isRotation,
+    isRotation,
+  };
+}
+
 export function segmentAlgWithTriggers(alg: string): TriggerSegment[] {
   const tokens = splitAlgMoves(alg);
   const segments: TriggerSegment[] = [];
@@ -73,7 +110,7 @@ export function segmentAlgWithTriggers(alg: string): TriggerSegment[] {
     let matched: TriggerPattern | null = null;
 
     for (const pattern of SORTED_PATTERNS) {
-      if (pattern.sequence.length === 3 && tokens.length <= 2) continue;
+      if (pattern.sequence.length === 3 && tokens.length <= 3) continue;
       const len = pattern.sequence.length;
       if (i + len <= tokens.length) {
         let ok = true;
@@ -94,6 +131,7 @@ export function segmentAlgWithTriggers(alg: string): TriggerSegment[] {
       segments.push({
         type: 'trigger',
         moves: tokens.slice(i, i + matched.sequence.length),
+        startIndex: i,
         triggerName: matched.name,
       });
       i += matched.sequence.length;
@@ -105,6 +143,7 @@ export function segmentAlgWithTriggers(alg: string): TriggerSegment[] {
         segments.push({
           type: 'moves',
           moves: [tokens[i]],
+          startIndex: i,
         });
       }
       i += 1;

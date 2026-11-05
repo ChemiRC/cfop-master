@@ -21,6 +21,7 @@ import type {
 } from '../types/cfop';
 import { mirrorAlgLR, splitAlgMoves } from '../utils/algHelpers';
 import { triggerHaptic } from '../utils/haptics';
+import { AlgNotationBadges } from './AlgNotationBadges';
 import { Cube2DPreview } from './Cube2DPreview';
 
 interface CubeViewerProps {
@@ -32,6 +33,7 @@ const SPEED_SEGMENTS = [
   { value: 0.25, label: '0.25x' },
   { value: 0.5, label: '0.5x' },
   { value: 1, label: '1x' },
+  { value: 1.5, label: '1.5x' },
   { value: 2, label: '2x' },
 ] as const;
 
@@ -83,11 +85,12 @@ const IsolatedTwistyHost = React.memo(
 );
 IsolatedTwistyHost.displayName = 'IsolatedTwistyHost';
 
-export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal }) => {
+export const CubeViewer: React.FC<CubeViewerProps> = ({
+  selection,
+  isLeftyGlobal,
+}) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<TwistyPlayerElement | null>(null);
-  const sequenceRef = useRef<HTMLDivElement | null>(null);
-  const moveButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const [playerReady, setPlayerReady] = useState<boolean>(false);
   const [cdnTimedOut, setCdnTimedOut] = useState<boolean>(false);
@@ -96,7 +99,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal
   const [viewMode, setViewMode] = useState<'3D' | '2D'>('3D');
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>('right');
   const [isMirrored, setIsMirrored] = useState<boolean>(Boolean(isLeftyGlobal));
-  const [useAltAlg, setUseAltAlg] = useState<boolean>(false);
+  const [selectedAlgIndex, setSelectedAlgIndex] = useState<number>(0);
   const [forceFullStickering, setForceFullStickering] = useState<boolean>(false);
   const [showDetails, setShowDetails] = useState<boolean>(
     () =>
@@ -113,11 +116,23 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal
 
   useEffect(() => {
     setIsMirrored(Boolean(isLeftyGlobal));
-    setUseAltAlg(false);
+    setSelectedAlgIndex(0);
     setForceFullStickering(false);
   }, [selection.id, isLeftyGlobal]);
 
-  const baseAlg = useAltAlg && selection.altAlg ? selection.altAlg : selection.alg;
+  const availableAlgs = useMemo(() => {
+    const raw = [
+      selection.alg,
+      ...(selection.altAlgs && selection.altAlgs.length > 0
+        ? selection.altAlgs
+        : selection.altAlg
+        ? [selection.altAlg]
+        : []),
+    ].filter(Boolean);
+    return Array.from(new Set(raw));
+  }, [selection.alg, selection.altAlg, selection.altAlgs]);
+
+  const baseAlg = availableAlgs[selectedAlgIndex] ?? selection.alg;
   const effectiveAlg = useMemo(
     () => (isMirrored ? mirrorAlgLR(baseAlg) : baseAlg),
     [baseAlg, isMirrored]
@@ -320,20 +335,6 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal
     }
   }, [playerReady, cameraPreset]);
 
-  // Centra horizontalmente el movimiento activo en la tira de secuencia (móvil)
-  useEffect(() => {
-    const strip = sequenceRef.current;
-    if (!strip) return;
-    if (activeMoveIndex < 0) {
-      strip.scrollTo({ left: 0, behavior: 'smooth' });
-      return;
-    }
-    const btn = moveButtonRefs.current[activeMoveIndex];
-    if (!btn || strip.scrollWidth <= strip.clientWidth) return;
-    const target = btn.offsetLeft - strip.clientWidth / 2 + btn.clientWidth / 2;
-    strip.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
-  }, [activeMoveIndex]);
-
   const handleTogglePlay = useCallback(() => {
     const player = playerRef.current;
     if (!player) return;
@@ -469,6 +470,12 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal
     });
   }, []);
 
+  const handleCycleAltAlg = useCallback(() => {
+    if (availableAlgs.length <= 1) return;
+    triggerHaptic('selection');
+    setSelectedAlgIndex((prev) => (prev + 1) % availableAlgs.length);
+  }, [availableAlgs.length]);
+
   const handleCopyAlg = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(effectiveAlg);
@@ -488,7 +495,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-[#222226] bg-[#111113]">
       {/* Cabecera del caso */}
-      <div className="flex items-center gap-2.5 border-b border-[#222226] px-3 py-2.5">
+      <div className="flex items-center gap-2 border-b border-[#222226] px-3 py-2.5">
         <span
           translate="no"
           className={`shrink-0 font-mono text-xs font-semibold tabular-nums ${stageAccent.textClass}`}
@@ -498,9 +505,14 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal
         <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-[#FAFAFA]">
           {selection.title}
         </h2>
+        {selection.isTwoLook && (
+          <span className="hidden rounded border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 font-mono text-[10px] font-medium text-zinc-300 sm:inline">
+            2-LOOK
+          </span>
+        )}
         {isMirrored && (
           <span className="rounded border border-[#3B82F6]/40 bg-[#3B82F6]/10 px-1.5 py-0.5 font-mono text-[10px] font-medium text-[#3B82F6]">
-            ZURDO L↔R
+            L↔R
           </span>
         )}
         <button
@@ -519,7 +531,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal
       </div>
 
       {/* Viewport 3D / 2D con etiquetas en las esquinas */}
-      <div className="relative h-[clamp(210px,34dvh,270px)] border-b border-[#222226] bg-[#0C0C0E] lg:h-72">
+      <div className="relative h-[clamp(195px,30dvh,255px)] border-b border-[#222226] bg-[#0C0C0E] lg:h-64">
         <IsolatedTwistyHost ref={containerRef} hidden={viewMode !== '3D'} />
 
         {viewMode === '2D' && (
@@ -609,18 +621,17 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal
           >
             L↔R
           </button>
-          {selection.altAlg && (
+          {availableAlgs.length > 1 && (
             <button
               type="button"
-              onClick={() => {
-                triggerHaptic('selection');
-                setUseAltAlg((prev) => !prev);
-              }}
-              aria-pressed={useAltAlg}
-              title="Algoritmo alternativo"
-              className={chipClass(useAltAlg)}
+              onClick={handleCycleAltAlg}
+              aria-pressed={selectedAlgIndex > 0}
+              title="Cambiar variante de algoritmo"
+              className={chipClass(selectedAlgIndex > 0)}
             >
-              ALT
+              {selectedAlgIndex === 0
+                ? `ALT (${availableAlgs.length - 1})`
+                : `ALT ${selectedAlgIndex}/${availableAlgs.length - 1}`}
             </button>
           )}
           {selection.stickering !== 'full' && (
@@ -640,6 +651,36 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal
         </div>
       </div>
 
+      {/* Selector explícito de algoritmos alternativos cuando el caso tiene variantes */}
+      {availableAlgs.length > 1 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto border-b border-[#222226] bg-[#0C0C0E] px-3 py-1.5 no-scrollbar">
+          <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+            VARIANTE:
+          </span>
+          {availableAlgs.map((algVariant, idx) => {
+            const active = selectedAlgIndex === idx;
+            return (
+              <button
+                key={idx}
+                type="button"
+                title={algVariant}
+                onClick={() => {
+                  triggerHaptic('selection');
+                  setSelectedAlgIndex(idx);
+                }}
+                className={`inline-flex h-6 shrink-0 items-center gap-1 rounded border px-2 font-mono text-[11px] transition-colors ${
+                  active
+                    ? 'border-[#FAFAFA] bg-[#FAFAFA] font-semibold text-[#09090B]'
+                    : 'border-[#222226] bg-[#141418] text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <span>{idx === 0 ? 'Principal' : `Alt ${idx}`}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Guía Ergonómica Técnica: Agarre Inicial y AUF */}
       {(selection.grip || selection.auf) && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-[#222226] bg-[#0C0C0E] px-3 py-1.5 font-mono text-[11px] tabular-nums text-zinc-400">
@@ -658,49 +699,25 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal
         </div>
       )}
 
-      {/* Secuencia: scroll horizontal en móvil, multilínea en desktop */}
-      <div className="border-b border-[#222226] bg-[#09090B] py-2.5">
-        <div className="mb-1.5 flex items-center justify-between px-3 font-mono text-[11px] tabular-nums text-zinc-500">
-          <span>Secuencia</span>
+      {/* Secuencia Karaoke con Chunking Cognitivo + Auto-scroll horizontal en móvil */}
+      <div className="border-b border-[#222226] bg-[#09090B] px-3 py-2.5">
+        <div className="mb-1.5 flex items-center justify-between font-mono text-[11px] tabular-nums text-zinc-500">
+          <span>Secuencia (toca un paso)</span>
           <span translate="no" className="text-zinc-400">
-            {Math.min(completedMoves, moves.length)}/{moves.length}
+            {Math.min(completedMoves, moves.length)}/{moves.length} HTM
           </span>
         </div>
 
-        <div
-          ref={sequenceRef}
-          translate="no"
-          className="no-scrollbar relative flex gap-1 overflow-x-auto scroll-smooth px-3 lg:flex-wrap lg:overflow-visible"
-        >
-          {moves.map((move, idx) => {
-            const isActive = idx === activeMoveIndex;
-            const isDone = idx < completedMoves && !isActive;
-
-            return (
-              <button
-                key={`${move}-${idx}`}
-                ref={(el) => {
-                  moveButtonRefs.current[idx] = el;
-                }}
-                type="button"
-                onClick={() => handleJumpToMove(idx)}
-                aria-label={`Ir al paso ${idx + 1}: ${move}`}
-                className={`h-9 min-w-[2.5rem] shrink-0 rounded-md border px-2 font-mono text-sm font-semibold tabular-nums transition-colors lg:h-8 lg:min-w-[2.125rem] lg:text-xs ${
-                  isActive
-                    ? 'border-[#FAFAFA] bg-[#FAFAFA] text-[#09090B]'
-                    : isDone
-                    ? 'border-[#10B981]/40 bg-[#10B981]/10 text-[#10B981]'
-                    : 'border-[#222226] bg-[#111113] text-zinc-300 hover:border-zinc-700'
-                }`}
-              >
-                {move}
-              </button>
-            );
-          })}
-        </div>
+        <AlgNotationBadges
+          alg={effectiveAlg}
+          activeMoveIndex={activeMoveIndex}
+          completedMoves={completedMoves}
+          onMoveClick={handleJumpToMove}
+          autoScroll
+        />
       </div>
 
-      {/* Controles de reproducción + velocidad */}
+      {/* Controles de reproducción (44x44px mínimo en móvil) + velocidad 5 niveles */}
       <div className="space-y-2.5 border-b border-[#222226] px-3 py-3">
         <div className="flex items-center gap-1.5">
           <button
@@ -772,7 +789,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal
           translate="no"
           role="radiogroup"
           aria-label="Velocidad"
-          className="grid grid-cols-4 rounded-md border border-zinc-800 bg-[#09090B] p-0.5"
+          className="grid grid-cols-5 rounded-md border border-zinc-800 bg-[#09090B] p-0.5"
         >
           {SPEED_SEGMENTS.map((seg) => {
             const active = Math.abs(tempoScale - seg.value) < 0.03;
@@ -801,9 +818,9 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({ selection, isLeftyGlobal
         {/* Atajos de teclado: solo en pantallas con teclado */}
         <div className="hidden items-center justify-center gap-4 text-[11px] text-zinc-500 lg:flex">
           {[
-            { keys: ['Space'], label: 'Play' },
-            { keys: ['←', '→'], label: 'Paso' },
-            { keys: ['R'], label: 'Reset' },
+            { keys: ['Espacio'], label: 'Play/Pausa' },
+            { keys: ['←', '→'], label: 'Paso a paso' },
+            { keys: ['R'], label: 'Reiniciar' },
           ].map((hint) => (
             <span key={hint.label} className="inline-flex items-center gap-1">
               {hint.keys.map((k) => (
