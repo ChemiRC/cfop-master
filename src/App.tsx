@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronUp, Timer, X } from 'lucide-react';
+import { BookOpen, ChevronUp, Timer, X } from 'lucide-react';
 import {
   CFOP_CASES,
   CFOP_REDUCIDO_CASES,
@@ -17,6 +17,7 @@ import type {
   CfopCase,
   CfopStage,
   NotationMove,
+  TopFaceColor,
   VisualStage,
 } from './types/cfop';
 import { mirrorAlgLR } from './utils/algHelpers';
@@ -80,27 +81,47 @@ function moveToSelection(m: NotationMove, nonce: number): ActiveSelection {
   };
 }
 
-const NAV_ITEMS: Array<{
+interface NavItemConfig {
   id: CfopStage;
   label: string;
-  mobileLabel: string;
   count?: number;
-  dotColor?: string;
-  isTimer?: boolean;
-}> = [
-  { id: 'Notation', label: 'Notación', mobileLabel: 'Notac.' },
+  accentBarClass?: string;
+  icon?: 'notation' | 'timer';
+}
+
+const NAV_ITEMS: NavItemConfig[] = [
+  { id: 'Notation', label: 'Notación', icon: 'notation' },
   {
     id: 'Reducido',
     label: 'Reducido',
-    mobileLabel: 'Reduc.',
     count: CFOP_REDUCIDO_CASES.length,
-    dotColor: 'bg-[#10B981]',
+    accentBarClass: 'bg-[#10B981]',
   },
-  { id: 'Cross', label: 'Cross', mobileLabel: 'Cross', count: 6, dotColor: 'bg-[#F4F4F5]' },
-  { id: 'F2L', label: 'F2L', mobileLabel: 'F2L', count: 41, dotColor: 'bg-[#3B82F6]' },
-  { id: 'OLL', label: 'OLL', mobileLabel: 'OLL', count: 57, dotColor: 'bg-[#EAB308]' },
-  { id: 'PLL', label: 'PLL', mobileLabel: 'PLL', count: 21, dotColor: 'bg-[#EF4444]' },
-  { id: 'Timer', label: 'Timer', mobileLabel: 'Timer', isTimer: true },
+  {
+    id: 'Cross',
+    label: 'Cross',
+    count: 6,
+    accentBarClass: 'bg-[#FAFAFA] ring-1 ring-zinc-500/80',
+  },
+  {
+    id: 'F2L',
+    label: 'F2L',
+    count: 41,
+    accentBarClass: 'bg-[#3B82F6]',
+  },
+  {
+    id: 'OLL',
+    label: 'OLL',
+    count: 57,
+    accentBarClass: 'bg-[#EAB308]',
+  },
+  {
+    id: 'PLL',
+    label: 'PLL',
+    count: 21,
+    accentBarClass: 'bg-[#EF4444]',
+  },
+  { id: 'Timer', label: 'Timer', icon: 'timer' },
 ];
 
 function isDesktop(): boolean {
@@ -111,9 +132,13 @@ function isDesktop(): boolean {
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<CfopStage>('F2L');
+  const [topFace, setTopFace] = useState<TopFaceColor>('yellow');
   const [isSheetOpen, setIsSheetOpen] = useState<boolean>(false);
   const [dragOffset, setDragOffset] = useState<number>(0);
   const dragStartY = useRef<number | null>(null);
+  const mobileNavRefs = useRef<Partial<Record<CfopStage, HTMLButtonElement | null>>>(
+    {}
+  );
 
   // Modo Zurdo Global persistente
   const [isLeftyMode, setIsLeftyMode] = useState<boolean>(() => {
@@ -182,6 +207,10 @@ export const App: React.FC = () => {
     });
   }, []);
 
+  const toggleTopFace = useCallback(() => {
+    setTopFace((prev) => (prev === 'yellow' ? 'white' : 'yellow'));
+  }, []);
+
   const [selection, setSelection] = useState<ActiveSelection>(() => {
     const initialCase =
       CFOP_CASES.find((c) => c.stage === 'F2L') ?? CFOP_CASES[0];
@@ -205,6 +234,18 @@ export const App: React.FC = () => {
       if (firstStageCase) setSelection(caseToSelection(firstStageCase));
     }
   }, []);
+
+  // Centra suavemente la pestaña activa en la barra móvil con scroll horizontal
+  useEffect(() => {
+    const btn = mobileNavRefs.current[activeTab];
+    if (btn) {
+      btn.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest',
+      });
+    }
+  }, [activeTab]);
 
   const handleSelectMove = useCallback(
     (move: NotationMove) => {
@@ -320,10 +361,40 @@ export const App: React.FC = () => {
 
   const isSelectionReducido = selection.stage === 'Reducido';
 
+  const renderNavIndicator = (item: NavItemConfig, isActive: boolean) => {
+    if (item.icon === 'timer') {
+      return (
+        <Timer
+          className={`h-3.5 w-3.5 shrink-0 ${
+            isActive ? 'text-[#09090B]' : 'text-sky-400'
+          }`}
+        />
+      );
+    }
+    if (item.icon === 'notation') {
+      return (
+        <BookOpen
+          className={`h-3.5 w-3.5 shrink-0 ${
+            isActive ? 'text-[#09090B]' : 'text-zinc-400'
+          }`}
+        />
+      );
+    }
+    if (item.accentBarClass) {
+      return (
+        <span
+          aria-hidden="true"
+          className={`h-3.5 w-1.5 shrink-0 rounded-full ${item.accentBarClass}`}
+        />
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="relative flex min-h-[100dvh] flex-col text-zinc-100">
       {/* Header: 56px + safe area superior */}
-      <header className="pt-safe sticky top-0 z-30 border-b border-[#222226] bg-[#09090B]/90 backdrop-blur-md">
+      <header className="pt-safe sticky top-0 z-30 border-b border-zinc-800/80 bg-[#09090B]/95 backdrop-blur-md">
         <div className="px-safe mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 sm:px-6">
           <button
             type="button"
@@ -345,10 +416,10 @@ export const App: React.FC = () => {
             </span>
           </button>
 
-          {/* Selector de Etapas en Desktop */}
+          {/* Barra de navegación Desktop: contenedor definido + acentos claros + alto contraste */}
           <nav
             aria-label="Etapas"
-            className="hidden items-center rounded-lg border border-[#222226] bg-[#111113] p-1 lg:flex"
+            className="no-scrollbar hidden items-center gap-1 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900 p-1 lg:flex"
           >
             {NAV_ITEMS.map((item) => {
               const isActive = activeTab === item.id;
@@ -358,26 +429,20 @@ export const App: React.FC = () => {
                   type="button"
                   onClick={() => handleTabChange(item.id)}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
+                  className={`inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 text-xs transition-colors ${
                     isActive
                       ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
-                      : 'text-zinc-400 hover:bg-[#16161A] hover:text-zinc-200'
+                      : 'font-medium text-zinc-300 hover:bg-zinc-800 hover:text-[#FAFAFA]'
                   }`}
                 >
-                  {item.isTimer ? (
-                    <Timer className="h-3.5 w-3.5" />
-                  ) : (
-                    item.dotColor && (
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${item.dotColor}`}
-                      />
-                    )
-                  )}
+                  {renderNavIndicator(item, isActive)}
                   <span>{item.label}</span>
                   {item.count !== undefined && (
                     <span
-                      className={`font-mono text-[10px] tabular-nums ${
-                        isActive ? 'text-zinc-700' : 'text-zinc-500'
+                      className={`rounded px-1.5 py-0.5 font-mono text-[10px] tabular-nums leading-none ${
+                        isActive
+                          ? 'bg-zinc-900/10 font-semibold text-zinc-800'
+                          : 'bg-zinc-800 text-zinc-400'
                       }`}
                     >
                       {item.count}
@@ -402,7 +467,7 @@ export const App: React.FC = () => {
                 className={`inline-flex h-7 items-center gap-1 rounded-md border px-2 font-mono text-[11px] font-medium transition-colors ${
                   isLeftyMode
                     ? 'border-[#3B82F6] bg-[#3B82F6]/15 text-[#3B82F6]'
-                    : 'border-[#222226] bg-[#111113] text-zinc-400 hover:text-zinc-200'
+                    : 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-[#FAFAFA]'
                 }`}
               >
                 <span>L↔R</span>
@@ -414,7 +479,7 @@ export const App: React.FC = () => {
 
             <span
               translate="no"
-              className="font-mono text-xs tabular-nums text-zinc-500"
+              className="font-mono text-xs tabular-nums text-zinc-400"
               aria-label="Indicador actual"
             >
               {headerMetric}
@@ -427,7 +492,7 @@ export const App: React.FC = () => {
       <main
         className={
           isTimerTab
-            ? 'flex w-full flex-1 flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0'
+            ? 'flex w-full flex-1 flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0'
             : 'px-safe pb-dock mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-5 pt-4 sm:px-6 sm:pt-5 lg:grid-cols-12 lg:items-start lg:gap-6'
         }
       >
@@ -447,6 +512,7 @@ export const App: React.FC = () => {
                 selectedCaseId={selection.id}
                 onSelectCase={handleSelectCase}
                 isLeftyGlobal={isLeftyMode}
+                topFace={topFace}
                 learnedIds={
                   activeTab === 'Reducido' ? reducidoLearnedIds : undefined
                 }
@@ -514,6 +580,8 @@ export const App: React.FC = () => {
               selection={selection}
               isLeftyGlobal={isLeftyMode}
               shortcutsEnabled={!isTimerTab}
+              topFace={topFace}
+              onToggleTopFace={toggleTopFace}
               isLearned={
                 isSelectionReducido
                   ? reducidoLearnedIds.has(selection.id)
@@ -541,7 +609,7 @@ export const App: React.FC = () => {
       )}
 
       {/* Sticky Bottom Dock móvil (Zona del Pulgar) */}
-      <div className="pb-safe-2 fixed inset-x-0 bottom-0 z-30 border-t border-[#222226] bg-[#09090B]/95 px-2.5 pt-2 backdrop-blur-md lg:hidden">
+      <div className="pb-safe-2 fixed inset-x-0 bottom-0 z-30 border-t border-zinc-800/80 bg-[#09090B]/95 px-2.5 pt-2 backdrop-blur-md lg:hidden">
         {!isTimerTab && (
           <div className="mb-2 flex items-center gap-2">
             <button
@@ -550,10 +618,14 @@ export const App: React.FC = () => {
                 triggerHaptic('light');
                 setIsSheetOpen(true);
               }}
-              className="flex h-13 min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-[#222226] bg-[#111113] p-1.5 text-left active:bg-[#16161A]"
+              className="flex h-13 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-zinc-800 bg-zinc-900/90 p-1.5 text-left active:bg-zinc-800"
             >
               <div className="[&>div]:h-10 [&>div]:w-10 [&>div]:p-0.5">
-                <Cube2DPreview alg={dockDisplayAlg} stage={dockPreviewStage} />
+                <Cube2DPreview
+                  alg={dockDisplayAlg}
+                  stage={dockPreviewStage}
+                  topFace={topFace}
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-1.5">
@@ -563,7 +635,7 @@ export const App: React.FC = () => {
                   >
                     {selection.code}
                   </span>
-                  <span className="truncate text-xs text-zinc-400">
+                  <span className="truncate text-xs text-zinc-300">
                     {selection.title}
                   </span>
                 </div>
@@ -574,7 +646,7 @@ export const App: React.FC = () => {
                   {dockDisplayAlg}
                 </p>
               </div>
-              <span className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md bg-[#FAFAFA] px-2.5 font-mono text-xs font-semibold text-[#09090B]">
+              <span className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg bg-[#FAFAFA] px-2.5 font-mono text-xs font-semibold text-[#09090B]">
                 3D
                 <ChevronUp className="h-3.5 w-3.5" />
               </span>
@@ -584,10 +656,10 @@ export const App: React.FC = () => {
               type="button"
               onClick={toggleLeftyMode}
               title={isLeftyMode ? 'Modo Zurdo activo' : 'Activar Modo Zurdo'}
-              className={`flex h-13 w-11 shrink-0 flex-col items-center justify-center rounded-lg border font-mono text-[10px] font-medium transition-colors ${
+              className={`flex h-13 w-11 shrink-0 flex-col items-center justify-center rounded-xl border font-mono text-[10px] font-medium transition-colors ${
                 isLeftyMode
                   ? 'border-[#3B82F6] bg-[#3B82F6]/15 text-[#3B82F6]'
-                  : 'border-[#222226] bg-[#111113] text-zinc-400'
+                  : 'border-zinc-800 bg-zinc-900 text-zinc-300'
               }`}
             >
               <span>L↔R</span>
@@ -596,34 +668,41 @@ export const App: React.FC = () => {
           </div>
         )}
 
+        {/* Barra de navegación móvil: etiquetas completas, sin abreviaturas, scroll horizontal suave */}
         <nav
           aria-label="Etapas"
-          className="grid grid-cols-7 gap-0.5 rounded-lg border border-[#222226] bg-[#111113] p-0.5"
+          className="no-scrollbar flex items-center gap-1 overflow-x-auto scroll-smooth rounded-xl border border-zinc-800 bg-zinc-900 p-1"
         >
           {NAV_ITEMS.map((item) => {
             const isActive = activeTab === item.id;
             return (
               <button
                 key={item.id}
+                ref={(el) => {
+                  mobileNavRefs.current[item.id] = el;
+                }}
                 type="button"
                 onClick={() => handleTabChange(item.id)}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex h-11 flex-col items-center justify-center gap-0.5 rounded-md px-0.5 text-[10px] font-medium transition-colors sm:flex-row sm:gap-1 sm:text-[11px] ${
+                className={`inline-flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-xs transition-colors ${
                   isActive
                     ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
-                    : 'text-zinc-400'
+                    : 'font-medium text-zinc-300 active:bg-zinc-800'
                 }`}
               >
-                {item.isTimer ? (
-                  <Timer className="h-3 w-3 shrink-0" />
-                ) : item.dotColor ? (
+                {renderNavIndicator(item, isActive)}
+                <span>{item.label}</span>
+                {item.count !== undefined && (
                   <span
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.dotColor}`}
-                  />
-                ) : (
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-600" />
+                    className={`rounded px-1.5 py-0.5 font-mono text-[10px] tabular-nums leading-none ${
+                      isActive
+                        ? 'bg-zinc-900/10 font-semibold text-zinc-800'
+                        : 'bg-zinc-800 text-zinc-400'
+                    }`}
+                  >
+                    {item.count}
+                  </span>
                 )}
-                <span className="truncate leading-none">{item.mobileLabel}</span>
               </button>
             );
           })}

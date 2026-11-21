@@ -18,7 +18,12 @@ import {
   TWO_LOOK_OLL_IDS,
   TWO_LOOK_PLL_IDS,
 } from '../data/cfopData';
-import type { CfopCase, LearningStage, VisualStage } from '../types/cfop';
+import type {
+  CfopCase,
+  LearningStage,
+  TopFaceColor,
+  VisualStage,
+} from '../types/cfop';
 import { countAlgMoves, mirrorAlgLR } from '../utils/algHelpers';
 import { triggerHaptic } from '../utils/haptics';
 import { AlgNotationBadges } from './AlgNotationBadges';
@@ -32,6 +37,8 @@ interface CfopCatalogModuleProps {
   /** Conjunto de IDs aprendidos (persistido en localStorage) para CFOP Reducido */
   learnedIds?: Set<string>;
   onToggleLearned?: (id: string) => void;
+  /** Orientación superior del cubo ('yellow' por defecto o 'white') */
+  topFace?: TopFaceColor;
 }
 
 type CatalogScope = 'full' | '2look';
@@ -118,6 +125,7 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
   isLeftyGlobal = false,
   learnedIds,
   onToggleLearned,
+  topFace = 'yellow',
 }) => {
   const [scope, setScope] = useState<CatalogScope>('full');
   const [learnedFilter, setLearnedFilter] = useState<LearnedFilter>('all');
@@ -610,7 +618,11 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
                       : 'border-[#222226] bg-[#111113] hover:border-zinc-700 hover:bg-[#16161A]'
                   }`}
                 >
-                  <Cube2DPreview alg={displayAlg} stage={previewStage} />
+                  <Cube2DPreview
+                    alg={displayAlg}
+                    stage={previewStage}
+                    topFace={topFace}
+                  />
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1.5">

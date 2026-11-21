@@ -16,6 +16,7 @@ import type {
   ActiveSelection,
   CfopStage,
   StickeringType,
+  TopFaceColor,
   TwistyCoarseTimelineInfo,
   TwistyCurrentMoveInfo,
   TwistyPlayerElement,
@@ -33,7 +34,33 @@ interface CubeViewerProps {
   onToggleLearned?: () => void;
   /** Desactiva atajos de teclado globales (ej. cuando la pestaña Timer está activa) */
   shortcutsEnabled?: boolean;
+  /** Orientación del cubo: cara superior Amarilla (por defecto, z2) o Blanca */
+  topFace?: TopFaceColor;
+  onToggleTopFace?: () => void;
 }
+
+/**
+ * Máscaras exactas de órbitas 3x3x3 de cubing.js para cada orientación:
+ * - En 'yellow' (setupAlg="z2"), las piezas amarillas (índices D: 4..7, centro 5) quedan arriba (U)
+ *   y las blancas (índices U: 0..3, centro 0) abajo (D).
+ * - En 'white' (setupAlg=""), las piezas blancas quedan arriba (U) y las amarillas abajo (D).
+ */
+const STICKERING_MASKS: Record<TopFaceColor, Record<StickeringType, string>> = {
+  yellow: {
+    full: 'EDGES:------------,CORNERS:--------,CENTERS:------',
+    OLL: 'EDGES:DDDDOOOODDDD,CORNERS:DDDDOOOO,CENTERS:DDDDD-',
+    PLL: 'EDGES:DDDDPPPPDDDD,CORNERS:DDDDPPPP,CENTERS:DDDDDD',
+    F2L: 'EDGES:----IIII----,CORNERS:----IIII,CENTERS:-----I',
+    Cross: 'EDGES:----IIIIIIII,CORNERS:IIIIIIII,CENTERS:-DDDDD',
+  },
+  white: {
+    full: 'EDGES:------------,CORNERS:--------,CENTERS:------',
+    OLL: 'EDGES:OOOODDDDDDDD,CORNERS:OOOODDDD,CENTERS:-DDDDD',
+    PLL: 'EDGES:PPPPDDDDDDDD,CORNERS:PPPPDDDD,CENTERS:DDDDDD',
+    F2L: 'EDGES:IIII--------,CORNERS:IIII----,CENTERS:I-----',
+    Cross: 'EDGES:IIII----IIII,CORNERS:IIIIIIII,CENTERS:DDDDD-',
+  },
+};
 
 const SPEED_SEGMENTS = [
   { value: 0.25, label: '0.25x' },
@@ -99,9 +126,22 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
   isLearned,
   onToggleLearned,
   shortcutsEnabled = true,
+  topFace,
+  onToggleTopFace,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<TwistyPlayerElement | null>(null);
+
+  const [internalTopFace, setInternalTopFace] = useState<TopFaceColor>('yellow');
+  const effectiveTopFace: TopFaceColor = topFace ?? internalTopFace;
+  const handleToggleOrientation = useCallback(() => {
+    triggerHaptic('selection');
+    if (onToggleTopFace) {
+      onToggleTopFace();
+    } else {
+      setInternalTopFace((prev) => (prev === 'yellow' ? 'white' : 'yellow'));
+    }
+  }, [onToggleTopFace]);
 
   const [playerReady, setPlayerReady] = useState<boolean>(false);
   const [cdnTimedOut, setCdnTimedOut] = useState<boolean>(false);
@@ -163,17 +203,24 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
   const effectiveStickering: StickeringType = forceFullStickering
     ? 'full'
     : selection.stickering;
+  const effectiveSetupAlg = effectiveTopFace === 'yellow' ? 'z2' : '';
+  const effectiveStickeringMask =
+    STICKERING_MASKS[effectiveTopFace][effectiveStickering];
 
   const latestPropsRef = useRef({
     alg: effectiveAlg,
+    setupAlg: effectiveSetupAlg,
     setupAnchor: selection.setupAnchor,
     stickering: effectiveStickering,
+    stickeringMask: effectiveStickeringMask,
     tempoScale,
   });
   latestPropsRef.current = {
     alg: effectiveAlg,
+    setupAlg: effectiveSetupAlg,
     setupAnchor: selection.setupAnchor,
     stickering: effectiveStickering,
+    stickeringMask: effectiveStickeringMask,
     tempoScale,
   };
 
@@ -209,8 +256,10 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
         player.background = 'none';
         player.hintFacelets = 'floating';
         player.controlPanel = 'none';
+        player.experimentalSetupAlg = initial.setupAlg;
         player.experimentalSetupAnchor = initial.setupAnchor;
         player.experimentalStickering = initial.stickering;
+        player.experimentalStickeringMaskOrbits = initial.stickeringMask;
         player.alg = initial.alg;
         player.tempoScale = initial.tempoScale;
         player.cameraLatitude = CAMERA_PRESETS.right.lat;
@@ -304,8 +353,10 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
 
     try {
       player.pause?.();
+      player.experimentalSetupAlg = effectiveSetupAlg;
       player.experimentalSetupAnchor = selection.setupAnchor;
       player.experimentalStickering = effectiveStickering;
+      player.experimentalStickeringMaskOrbits = effectiveStickeringMask;
       player.alg = effectiveAlg;
       player.jumpToStart?.({ flash: false });
       setActiveMoveIndex(-1);
@@ -328,8 +379,10 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
   }, [
     playerReady,
     effectiveAlg,
+    effectiveSetupAlg,
     selection.setupAnchor,
     effectiveStickering,
+    effectiveStickeringMask,
     selection.autoPlayNonce,
   ]);
 
@@ -599,7 +652,11 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
 
         {viewMode === '2D' && (
           <div className="absolute inset-0 flex items-center justify-center [&>div]:h-40 [&>div]:w-40">
-            <Cube2DPreview alg={effectiveAlg} stage={previewStageFor2D} />
+            <Cube2DPreview
+              alg={effectiveAlg}
+              stage={previewStageFor2D}
+              topFace={effectiveTopFace}
+            />
           </div>
         )}
 
@@ -711,6 +768,57 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
               FULL
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Barra de orientación del cubo: Cara arriba Amarilla (z2) / Blanca */}
+      <div className="flex items-center justify-between gap-2 border-b border-[#222226] bg-[#0C0C0E] px-3 py-1.5">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+          Cara arriba (U):
+        </span>
+        <div
+          role="group"
+          aria-label="Orientación de cara superior"
+          className="inline-flex items-center rounded-md border border-zinc-800 bg-[#09090B] p-0.5"
+        >
+          <button
+            type="button"
+            onClick={() => {
+              if (effectiveTopFace !== 'yellow') handleToggleOrientation();
+            }}
+            aria-pressed={effectiveTopFace === 'yellow'}
+            title="Cara amarilla arriba / blanca abajo (orientación estándar CFOP)"
+            className={`inline-flex h-7 items-center gap-1.5 rounded px-2.5 font-mono text-[11px] font-medium transition-colors lg:h-6 lg:px-2 ${
+              effectiveTopFace === 'yellow'
+                ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className="h-2.5 w-2.5 rounded-[2px] border border-zinc-900/40 bg-[#EAB308]"
+            />
+            <span>Amarilla</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (effectiveTopFace !== 'white') handleToggleOrientation();
+            }}
+            aria-pressed={effectiveTopFace === 'white'}
+            title="Cara blanca arriba / amarilla abajo"
+            className={`inline-flex h-7 items-center gap-1.5 rounded px-2.5 font-mono text-[11px] font-medium transition-colors lg:h-6 lg:px-2 ${
+              effectiveTopFace === 'white'
+                ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className="h-2.5 w-2.5 rounded-[2px] border border-zinc-500 bg-[#FAFAFA]"
+            />
+            <span>Blanca</span>
+          </button>
         </div>
       </div>
 

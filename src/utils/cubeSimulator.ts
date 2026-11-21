@@ -1,4 +1,4 @@
-import type { VisualStage } from '../types/cfop';
+import type { TopFaceColor, VisualStage } from '../types/cfop';
 import { splitAlgMoves } from './algHelpers';
 
 export type FaceCode = 'U' | 'D' | 'F' | 'B' | 'R' | 'L';
@@ -38,24 +38,44 @@ interface CubieState {
   stickers: StickerState[];
 }
 
-const FACE_COLORS: Record<FaceCode, string> = {
-  U: '#FAFAFA', // Blanco WCA
-  D: '#EAB308', // Amarillo Speedcube
-  F: '#10B981', // Verde Speedcube
-  B: '#3B82F6', // Azul Speedcube
-  R: '#EF4444', // Rojo Speedcube
-  L: '#F97316', // Naranja Speedcube
+const FACE_COLORS_BY_TOP: Record<TopFaceColor, Record<FaceCode, string>> = {
+  // Orientación estándar CFOP (z2 desde WCA): Amarilla arriba (U), Blanca abajo (D), Verde al frente (F)
+  yellow: {
+    U: '#EAB308', // Amarillo Speedcube
+    D: '#FAFAFA', // Blanco WCA
+    F: '#10B981', // Verde Speedcube
+    B: '#3B82F6', // Azul Speedcube
+    R: '#F97316', // Naranja Speedcube
+    L: '#EF4444', // Rojo Speedcube
+  },
+  // Orientación alternativa: Blanca arriba (U), Amarilla abajo (D), Verde al frente (F)
+  white: {
+    U: '#FAFAFA', // Blanco WCA
+    D: '#EAB308', // Amarillo Speedcube
+    F: '#10B981', // Verde Speedcube
+    B: '#3B82F6', // Azul Speedcube
+    R: '#EF4444', // Rojo Speedcube
+    L: '#F97316', // Naranja Speedcube
+  },
 };
 
-const OLL_YELLOW = '#EAB308';
-
-const DIM_FACE_COLORS: Record<FaceCode, string> = {
-  U: '#71717A',
-  D: '#854D0E',
-  F: '#065F46',
-  B: '#1E3A8A',
-  R: '#7F1D1D',
-  L: '#7C2D12',
+const DIM_FACE_COLORS_BY_TOP: Record<TopFaceColor, Record<FaceCode, string>> = {
+  yellow: {
+    U: '#854D0E',
+    D: '#71717A',
+    F: '#065F46',
+    B: '#1E3A8A',
+    R: '#7C2D12',
+    L: '#7F1D1D',
+  },
+  white: {
+    U: '#71717A',
+    D: '#854D0E',
+    F: '#065F46',
+    B: '#1E3A8A',
+    R: '#7F1D1D',
+    L: '#7C2D12',
+  },
 };
 
 const IGNORED_COLOR = '#1F1F24';
@@ -327,8 +347,13 @@ function getStickerColorForStage(
   cubie: CubieState,
   sticker: StickerState,
   stage: VisualStage,
-  frame: HorizontalFrame
+  frame: HorizontalFrame,
+  topFace: TopFaceColor
 ): StickerCell {
+  const palette = FACE_COLORS_BY_TOP[topFace];
+  const dimPalette = DIM_FACE_COLORS_BY_TOP[topFace];
+  const topPrimaryColor = palette.U;
+
   const { homePos } = cubie;
   const isUPiece = homePos.y === 1;
   const isCrossPiece =
@@ -340,7 +365,7 @@ function getStickerColorForStage(
       if (sticker.isPrimaryU) {
         return {
           face: sticker.homeFace,
-          color: OLL_YELLOW,
+          color: topPrimaryColor,
           masked: false,
         };
       }
@@ -348,7 +373,7 @@ function getStickerColorForStage(
     }
     return {
       face: sticker.homeFace,
-      color: DIM_FACE_COLORS[sticker.homeFace],
+      color: dimPalette[sticker.homeFace],
       masked: true,
     };
   }
@@ -358,19 +383,19 @@ function getStickerColorForStage(
       if (sticker.isPrimaryU) {
         return {
           face: sticker.homeFace,
-          color: OLL_YELLOW,
+          color: topPrimaryColor,
           masked: false,
         };
       }
       return {
         face: sticker.homeFace,
-        color: FACE_COLORS[sticker.homeFace],
+        color: palette[sticker.homeFace],
         masked: false,
       };
     }
     return {
       face: sticker.homeFace,
-      color: DIM_FACE_COLORS[sticker.homeFace],
+      color: dimPalette[sticker.homeFace],
       masked: true,
     };
   }
@@ -383,7 +408,7 @@ function getStickerColorForStage(
         homePos.y <= 0;
       return {
         face: sticker.homeFace,
-        color: FACE_COLORS[sticker.homeFace],
+        color: palette[sticker.homeFace],
         masked: !isTargetFRPair,
       };
     }
@@ -394,7 +419,7 @@ function getStickerColorForStage(
   if (isCrossPiece) {
     return {
       face: sticker.homeFace,
-      color: FACE_COLORS[sticker.homeFace],
+      color: palette[sticker.homeFace],
       masked: false,
     };
   }
@@ -403,7 +428,7 @@ function getStickerColorForStage(
   if (isCenter) {
     return {
       face: sticker.homeFace,
-      color: DIM_FACE_COLORS[sticker.homeFace],
+      color: dimPalette[sticker.homeFace],
       masked: true,
     };
   }
@@ -508,7 +533,8 @@ export interface SimulatedCaseView {
  */
 export function simulateCasePreState(
   alg: string,
-  stage: VisualStage
+  stage: VisualStage,
+  topFace: TopFaceColor = 'yellow'
 ): SimulatedCaseView {
   const cubies = createSolvedCube();
   const tokens = splitAlgMoves(alg);
@@ -551,7 +577,7 @@ export function simulateCasePreState(
       (s) => s.normal.x === nx && s.normal.y === ny && s.normal.z === nz
     );
     if (!st) return fallbackCell;
-    return getStickerColorForStage(cubie, st, stage, frame);
+    return getStickerColorForStage(cubie, st, stage, frame, topFace);
   };
 
   const topGrid: StickerCell[][] = [-1, 0, 1].map((z) =>

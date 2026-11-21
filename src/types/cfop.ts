@@ -11,6 +11,8 @@ export type LearningStage = Exclude<CfopStage, 'Notation' | 'Timer'>;
 
 export type VisualStage = 'Cross' | 'F2L' | 'OLL' | 'PLL';
 
+export type TopFaceColor = 'yellow' | 'white';
+
 export type StickeringType = 'full' | 'Cross' | 'F2L' | 'OLL' | 'PLL';
 
 export type NotationCategory = 'basic' | 'double' | 'slice' | 'wide' | 'rotation';
@@ -122,8 +124,10 @@ export interface TwistyIndexer {
 export interface TwistyPlayerElement extends HTMLElement {
   alg: string;
   tempoScale: number;
+  experimentalSetupAlg: string;
   experimentalSetupAnchor: 'start' | 'end';
   experimentalStickering: StickeringType;
+  experimentalStickeringMaskOrbits: string | null;
   background: 'none' | 'checkered' | 'auto';
   hintFacelets: 'floating' | 'none' | 'auto';
   controlPanel: 'none' | 'bottom-row' | 'auto';

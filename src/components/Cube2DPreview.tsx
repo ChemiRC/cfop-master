@@ -1,5 +1,5 @@
 import React, { useId, useMemo } from 'react';
-import type { VisualStage } from '../types/cfop';
+import type { TopFaceColor, VisualStage } from '../types/cfop';
 import {
   simulateCasePreState,
   type PllArrow,
@@ -9,6 +9,7 @@ import {
 interface Cube2DPreviewProps {
   alg: string;
   stage: VisualStage;
+  topFace?: TopFaceColor;
 }
 
 function quadPoints(
@@ -32,10 +33,14 @@ function quadPoints(
  * - F2L / Cross: Proyección isométrica 3D con énfasis en el par activo (FR).
  */
 export const Cube2DPreview: React.FC<Cube2DPreviewProps> = React.memo(
-  ({ alg, stage }) => {
+  ({ alg, stage, topFace = 'yellow' }) => {
     const markerUid = useId().replace(/:/g, '');
-    const sim = useMemo(() => simulateCasePreState(alg, stage), [alg, stage]);
+    const sim = useMemo(
+      () => simulateCasePreState(alg, stage, topFace),
+      [alg, stage, topFace]
+    );
     const isLastLayer = stage === 'OLL' || stage === 'PLL';
+    const topPrimaryColor = topFace === 'yellow' ? '#EAB308' : '#FAFAFA';
 
     if (isLastLayer) {
       const cellSize = 18;
@@ -52,10 +57,10 @@ export const Cube2DPreview: React.FC<Cube2DPreviewProps> = React.memo(
         const y = gridStart + r * (cellSize + gap);
         const fill =
           stage === 'PLL'
-            ? '#EAB308'
+            ? topPrimaryColor
             : cell.masked
             ? '#18181C'
-            : '#EAB308';
+            : topPrimaryColor;
         const fillOpacity = stage === 'PLL' ? 0.88 : 1;
 
         return (
