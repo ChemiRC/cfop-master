@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronUp, X } from 'lucide-react';
+import { ChevronUp, Timer, X } from 'lucide-react';
 import {
   CFOP_CASES,
   CFOP_REDUCIDO_CASES,
@@ -11,6 +11,7 @@ import { CfopCatalogModule } from './components/CfopCatalogModule';
 import { Cube2DPreview } from './components/Cube2DPreview';
 import { CubeViewer } from './components/CubeViewer';
 import { NotationModule } from './components/NotationModule';
+import { TimerModule } from './components/TimerModule';
 import type {
   ActiveSelection,
   CfopCase,
@@ -85,6 +86,7 @@ const NAV_ITEMS: Array<{
   mobileLabel: string;
   count?: number;
   dotColor?: string;
+  isTimer?: boolean;
 }> = [
   { id: 'Notation', label: 'Notación', mobileLabel: 'Notac.' },
   {
@@ -98,6 +100,7 @@ const NAV_ITEMS: Array<{
   { id: 'F2L', label: 'F2L', mobileLabel: 'F2L', count: 41, dotColor: 'bg-[#3B82F6]' },
   { id: 'OLL', label: 'OLL', mobileLabel: 'OLL', count: 57, dotColor: 'bg-[#EAB308]' },
   { id: 'PLL', label: 'PLL', mobileLabel: 'PLL', count: 21, dotColor: 'bg-[#EF4444]' },
+  { id: 'Timer', label: 'Timer', mobileLabel: 'Timer', isTimer: true },
 ];
 
 function isDesktop(): boolean {
@@ -194,6 +197,7 @@ export const App: React.FC = () => {
     setActiveTab(stage);
     setIsSheetOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (stage === 'Timer') return;
     if (stage === 'Notation') {
       setSelection(moveToSelection(NOTATION_MOVES[0], 0));
     } else {
@@ -284,7 +288,10 @@ export const App: React.FC = () => {
     setDragOffset(0);
   };
 
+  const isTimerTab = activeTab === 'Timer';
+
   const headerMetric = useMemo(() => {
+    if (activeTab === 'Timer') return 'WCA 3×3';
     if (activeTab === 'Notation') {
       const ids = [
         ...NOTATION_MOVES.map((m) => m.id),
@@ -302,7 +309,9 @@ export const App: React.FC = () => {
 
   const dockPreviewStage: VisualStage =
     selection.visualStage ??
-    (selection.stage === 'Notation' || selection.stage === 'Reducido'
+    (selection.stage === 'Notation' ||
+    selection.stage === 'Reducido' ||
+    selection.stage === 'Timer'
       ? 'F2L'
       : selection.stage);
   const dockDisplayAlg = isLeftyMode
@@ -355,10 +364,14 @@ export const App: React.FC = () => {
                       : 'text-zinc-400 hover:bg-[#16161A] hover:text-zinc-200'
                   }`}
                 >
-                  {item.dotColor && (
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${item.dotColor}`}
-                    />
+                  {item.isTimer ? (
+                    <Timer className="h-3.5 w-3.5" />
+                  ) : (
+                    item.dotColor && (
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${item.dotColor}`}
+                      />
+                    )
                   )}
                   <span>{item.label}</span>
                   {item.count !== undefined && (
@@ -375,32 +388,34 @@ export const App: React.FC = () => {
             })}
           </nav>
 
-          {/* Controles rápidos de la derecha: Modo Zurdo + Métrica */}
+          {/* Controles rápidos de la derecha */}
           <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={toggleLeftyMode}
-              title={
-                isLeftyMode
-                  ? 'Modo Zurdo activo (L↔R activado en todos los algoritmos)'
-                  : 'Activar Modo Zurdo global (espejo L↔R)'
-              }
-              className={`inline-flex h-7 items-center gap-1 rounded-md border px-2 font-mono text-[11px] font-medium transition-colors ${
-                isLeftyMode
-                  ? 'border-[#3B82F6] bg-[#3B82F6]/15 text-[#3B82F6]'
-                  : 'border-[#222226] bg-[#111113] text-zinc-400 hover:text-zinc-200'
-              }`}
-            >
-              <span>L↔R</span>
-              <span className="hidden sm:inline">
-                {isLeftyMode ? 'ZURDO' : 'DIESTRO'}
-              </span>
-            </button>
+            {!isTimerTab && (
+              <button
+                type="button"
+                onClick={toggleLeftyMode}
+                title={
+                  isLeftyMode
+                    ? 'Modo Zurdo activo (L↔R activado en todos los algoritmos)'
+                    : 'Activar Modo Zurdo global (espejo L↔R)'
+                }
+                className={`inline-flex h-7 items-center gap-1 rounded-md border px-2 font-mono text-[11px] font-medium transition-colors ${
+                  isLeftyMode
+                    ? 'border-[#3B82F6] bg-[#3B82F6]/15 text-[#3B82F6]'
+                    : 'border-[#222226] bg-[#111113] text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <span>L↔R</span>
+                <span className="hidden sm:inline">
+                  {isLeftyMode ? 'ZURDO' : 'DIESTRO'}
+                </span>
+              </button>
+            )}
 
             <span
               translate="no"
               className="font-mono text-xs tabular-nums text-zinc-500"
-              aria-label="Posición del caso actual"
+              aria-label="Indicador actual"
             >
               {headerMetric}
             </span>
@@ -408,53 +423,70 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Arquitectura Split-Screen 12 columnas en Desktop (7 izq / 5 der) */}
-      <main className="px-safe pb-dock mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-5 pt-4 sm:px-6 sm:pt-5 lg:grid-cols-12 lg:items-start lg:gap-6">
-        <div className="min-w-0 lg:col-span-7">
-          {activeTab === 'Notation' ? (
-            <NotationModule
-              selectedId={selection.id}
-              onSelectMove={handleSelectMove}
-              onSelectTrigger={handleSelectTrigger}
-            />
-          ) : (
-            <CfopCatalogModule
-              stage={activeTab}
-              selectedCaseId={selection.id}
-              onSelectCase={handleSelectCase}
-              isLeftyGlobal={isLeftyMode}
-              learnedIds={
-                activeTab === 'Reducido' ? reducidoLearnedIds : undefined
-              }
-              onToggleLearned={
-                activeTab === 'Reducido' ? toggleReducidoLearned : undefined
-              }
-            />
-          )}
-        </div>
+      {/* Contenido principal: Timer a pantalla completa o Split-Screen 12 columnas */}
+      <main
+        className={
+          isTimerTab
+            ? 'flex w-full flex-1 flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0'
+            : 'px-safe pb-dock mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-5 pt-4 sm:px-6 sm:pt-5 lg:grid-cols-12 lg:items-start lg:gap-6'
+        }
+      >
+        {isTimerTab ? (
+          <TimerModule />
+        ) : (
+          <div className="min-w-0 lg:col-span-7">
+            {activeTab === 'Notation' ? (
+              <NotationModule
+                selectedId={selection.id}
+                onSelectMove={handleSelectMove}
+                onSelectTrigger={handleSelectTrigger}
+              />
+            ) : (
+              <CfopCatalogModule
+                stage={activeTab}
+                selectedCaseId={selection.id}
+                onSelectCase={handleSelectCase}
+                isLeftyGlobal={isLeftyMode}
+                learnedIds={
+                  activeTab === 'Reducido' ? reducidoLearnedIds : undefined
+                }
+                onToggleLearned={
+                  activeTab === 'Reducido' ? toggleReducidoLearned : undefined
+                }
+              />
+            )}
+          </div>
+        )}
 
         {/* Fondo oscuro del panel móvil */}
-        <div
-          onClick={() => setIsSheetOpen(false)}
-          aria-hidden="true"
-          className={`fixed inset-0 z-40 bg-black/75 transition-opacity duration-200 lg:hidden ${
-            isSheetOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
-          }`}
-        />
+        {!isTimerTab && (
+          <div
+            onClick={() => setIsSheetOpen(false)}
+            aria-hidden="true"
+            className={`fixed inset-0 z-40 bg-black/75 transition-opacity duration-200 lg:hidden ${
+              isSheetOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+            }`}
+          />
+        )}
 
-        {/* Derecha (5 columnas en Desktop sticky top-16 / Sheet reproductor ergonómico en móvil) */}
+        {/* Visor 3D (oculto y con atajos desactivados cuando Timer está activo) */}
         <aside
           aria-label="Visor 3D"
+          aria-hidden={isTimerTab || undefined}
           style={
             dragOffset > 0
               ? { transform: `translateY(${dragOffset}px)`, transition: 'none' }
               : undefined
           }
-          className={`lg:col-span-5 lg:static lg:z-auto lg:block max-lg:max-h-sheet max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-50 max-lg:flex max-lg:flex-col max-lg:rounded-t-xl max-lg:border-t max-lg:border-[#222226] max-lg:bg-[#09090B] max-lg:transition-transform max-lg:duration-300 max-lg:ease-out ${
-            isSheetOpen
-              ? 'max-lg:translate-y-0'
-              : 'max-lg:pointer-events-none max-lg:translate-y-full'
-          }`}
+          className={
+            isTimerTab
+              ? 'hidden'
+              : `lg:col-span-5 lg:static lg:z-auto lg:block max-lg:max-h-sheet max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-50 max-lg:flex max-lg:flex-col max-lg:rounded-t-xl max-lg:border-t max-lg:border-[#222226] max-lg:bg-[#09090B] max-lg:transition-transform max-lg:duration-300 max-lg:ease-out ${
+                  isSheetOpen
+                    ? 'max-lg:translate-y-0'
+                    : 'max-lg:pointer-events-none max-lg:translate-y-full'
+                }`
+          }
         >
           {/* Barra de arrastre (móvil) */}
           <div
@@ -481,6 +513,7 @@ export const App: React.FC = () => {
             <CubeViewer
               selection={selection}
               isLeftyGlobal={isLeftyMode}
+              shortcutsEnabled={!isTimerTab}
               isLearned={
                 isSelectionReducido
                   ? reducidoLearnedIds.has(selection.id)
@@ -496,72 +529,76 @@ export const App: React.FC = () => {
         </aside>
       </main>
 
-      <footer className="hidden border-t border-[#222226] py-4 lg:block">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 font-mono text-[11px] text-zinc-600">
-          <span>
-            CFOP Master · 17 CFOP Reducido + 125 Full CFOP (Cross, 41 F2L, 57 OLL, 21 PLL)
-          </span>
-          <span>Notación WCA · cubing.js · PWA</span>
-        </div>
-      </footer>
-
-      {/* Sticky Bottom Dock móvil (Zona del Pulgar): mini reproductor + selector de etapas */}
-      <div className="pb-safe-2 fixed inset-x-0 bottom-0 z-30 border-t border-[#222226] bg-[#09090B]/95 px-3 pt-2 backdrop-blur-md lg:hidden">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic('light');
-              setIsSheetOpen(true);
-            }}
-            className="flex h-13 min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-[#222226] bg-[#111113] p-1.5 text-left active:bg-[#16161A]"
-          >
-            <div className="[&>div]:h-10 [&>div]:w-10 [&>div]:p-0.5">
-              <Cube2DPreview alg={dockDisplayAlg} stage={dockPreviewStage} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline gap-1.5">
-                <span
-                  translate="no"
-                  className="shrink-0 font-mono text-[11px] font-semibold tabular-nums text-[#FAFAFA]"
-                >
-                  {selection.code}
-                </span>
-                <span className="truncate text-xs text-zinc-400">
-                  {selection.title}
-                </span>
-              </div>
-              <p
-                translate="no"
-                className="truncate font-mono text-[11px] tabular-nums text-zinc-400"
-              >
-                {dockDisplayAlg}
-              </p>
-            </div>
-            <span className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md bg-[#FAFAFA] px-2.5 font-mono text-xs font-semibold text-[#09090B]">
-              3D
-              <ChevronUp className="h-3.5 w-3.5" />
+      {!isTimerTab && (
+        <footer className="hidden border-t border-[#222226] py-4 lg:block">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 font-mono text-[11px] text-zinc-600">
+            <span>
+              CFOP Master · 17 CFOP Reducido + 125 Full CFOP (Cross, 41 F2L, 57 OLL, 21 PLL)
             </span>
-          </button>
+            <span>Notación WCA · cubing.js · PWA</span>
+          </div>
+        </footer>
+      )}
 
-          <button
-            type="button"
-            onClick={toggleLeftyMode}
-            title={isLeftyMode ? 'Modo Zurdo activo' : 'Activar Modo Zurdo'}
-            className={`flex h-13 w-11 shrink-0 flex-col items-center justify-center rounded-lg border font-mono text-[10px] font-medium transition-colors ${
-              isLeftyMode
-                ? 'border-[#3B82F6] bg-[#3B82F6]/15 text-[#3B82F6]'
-                : 'border-[#222226] bg-[#111113] text-zinc-400'
-            }`}
-          >
-            <span>L↔R</span>
-            <span className="text-[9px]">{isLeftyMode ? 'Z' : 'D'}</span>
-          </button>
-        </div>
+      {/* Sticky Bottom Dock móvil (Zona del Pulgar) */}
+      <div className="pb-safe-2 fixed inset-x-0 bottom-0 z-30 border-t border-[#222226] bg-[#09090B]/95 px-2.5 pt-2 backdrop-blur-md lg:hidden">
+        {!isTimerTab && (
+          <div className="mb-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setIsSheetOpen(true);
+              }}
+              className="flex h-13 min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-[#222226] bg-[#111113] p-1.5 text-left active:bg-[#16161A]"
+            >
+              <div className="[&>div]:h-10 [&>div]:w-10 [&>div]:p-0.5">
+                <Cube2DPreview alg={dockDisplayAlg} stage={dockPreviewStage} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-1.5">
+                  <span
+                    translate="no"
+                    className="shrink-0 font-mono text-[11px] font-semibold tabular-nums text-[#FAFAFA]"
+                  >
+                    {selection.code}
+                  </span>
+                  <span className="truncate text-xs text-zinc-400">
+                    {selection.title}
+                  </span>
+                </div>
+                <p
+                  translate="no"
+                  className="truncate font-mono text-[11px] tabular-nums text-zinc-400"
+                >
+                  {dockDisplayAlg}
+                </p>
+              </div>
+              <span className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md bg-[#FAFAFA] px-2.5 font-mono text-xs font-semibold text-[#09090B]">
+                3D
+                <ChevronUp className="h-3.5 w-3.5" />
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleLeftyMode}
+              title={isLeftyMode ? 'Modo Zurdo activo' : 'Activar Modo Zurdo'}
+              className={`flex h-13 w-11 shrink-0 flex-col items-center justify-center rounded-lg border font-mono text-[10px] font-medium transition-colors ${
+                isLeftyMode
+                  ? 'border-[#3B82F6] bg-[#3B82F6]/15 text-[#3B82F6]'
+                  : 'border-[#222226] bg-[#111113] text-zinc-400'
+              }`}
+            >
+              <span>L↔R</span>
+              <span className="text-[9px]">{isLeftyMode ? 'Z' : 'D'}</span>
+            </button>
+          </div>
+        )}
 
         <nav
           aria-label="Etapas"
-          className="mt-2 grid grid-cols-6 gap-0.5 rounded-lg border border-[#222226] bg-[#111113] p-0.5"
+          className="grid grid-cols-7 gap-0.5 rounded-lg border border-[#222226] bg-[#111113] p-0.5"
         >
           {NAV_ITEMS.map((item) => {
             const isActive = activeTab === item.id;
@@ -571,18 +608,22 @@ export const App: React.FC = () => {
                 type="button"
                 onClick={() => handleTabChange(item.id)}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex h-11 items-center justify-center gap-1 rounded-md px-0.5 text-[10px] font-medium transition-colors sm:text-[11px] ${
+                className={`flex h-11 flex-col items-center justify-center gap-0.5 rounded-md px-0.5 text-[10px] font-medium transition-colors sm:flex-row sm:gap-1 sm:text-[11px] ${
                   isActive
                     ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
                     : 'text-zinc-400'
                 }`}
               >
-                {item.dotColor && (
+                {item.isTimer ? (
+                  <Timer className="h-3 w-3 shrink-0" />
+                ) : item.dotColor ? (
                   <span
                     className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.dotColor}`}
                   />
+                ) : (
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-600" />
                 )}
-                <span className="truncate">{item.mobileLabel}</span>
+                <span className="truncate leading-none">{item.mobileLabel}</span>
               </button>
             );
           })}

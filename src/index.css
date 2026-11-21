@@ -56,6 +56,27 @@
     }
   }
 
+  /* Viewport exacto del Timer a pantalla completa (header 56px + nav inferior en móvil) */
+  .h-timer-viewport {
+    min-height: calc(
+      100dvh - 3.5rem - env(safe-area-inset-top) - 4.25rem -
+        env(safe-area-inset-bottom)
+    );
+  }
+  @media (min-width: 1024px) {
+    .h-timer-viewport {
+      min-height: calc(100dvh - 3.5rem);
+    }
+  }
+
+  /* Zona táctil del Timer: cero scroll, cero zoom, cero menú contextual al mantener presionado en iOS */
+  .timer-surface {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
   .max-h-sheet {
     max-height: calc(100dvh - env(safe-area-inset-top) - 0.75rem);
   }

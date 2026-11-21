@@ -31,6 +31,8 @@ interface CubeViewerProps {
   isLeftyGlobal?: boolean;
   isLearned?: boolean;
   onToggleLearned?: () => void;
+  /** Desactiva atajos de teclado globales (ej. cuando la pestaña Timer está activa) */
+  shortcutsEnabled?: boolean;
 }
 
 const SPEED_SEGMENTS = [
@@ -62,6 +64,7 @@ const STAGE_ACCENTS: Record<
   F2L: { label: 'F2L', dotClass: 'bg-[#3B82F6]', textClass: 'text-[#3B82F6]' },
   OLL: { label: 'OLL', dotClass: 'bg-[#EAB308]', textClass: 'text-[#EAB308]' },
   PLL: { label: 'PLL', dotClass: 'bg-[#EF4444]', textClass: 'text-[#EF4444]' },
+  Timer: { label: 'TIMER', dotClass: 'bg-[#FAFAFA]', textClass: 'text-[#FAFAFA]' },
 };
 
 const CTRL_BTN =
@@ -95,6 +98,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
   isLeftyGlobal,
   isLearned,
   onToggleLearned,
+  shortcutsEnabled = true,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<TwistyPlayerElement | null>(null);
@@ -426,6 +430,8 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
 
   // Atajos de teclado: Space (Play/Pausa), ← / → (Paso a paso), R (Reiniciar)
   useEffect(() => {
+    if (!shortcutsEnabled) return;
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (!playerReady) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -459,6 +465,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [
+    shortcutsEnabled,
     playerReady,
     handleTogglePlay,
     handleStepForward,
@@ -511,7 +518,9 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
   const stageAccent = STAGE_ACCENTS[selection.stage] ?? STAGE_ACCENTS.Notation;
   const previewStageFor2D: VisualStage =
     selection.visualStage ??
-    (selection.stage === 'Notation' || selection.stage === 'Reducido'
+    (selection.stage === 'Notation' ||
+    selection.stage === 'Reducido' ||
+    selection.stage === 'Timer'
       ? 'F2L'
       : selection.stage);
   const isNotation = selection.stage === 'Notation';

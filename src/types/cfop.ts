@@ -4,9 +4,10 @@ export type CfopStage =
   | 'Cross'
   | 'F2L'
   | 'OLL'
-  | 'PLL';
+  | 'PLL'
+  | 'Timer';
 
-export type LearningStage = Exclude<CfopStage, 'Notation'>;
+export type LearningStage = Exclude<CfopStage, 'Notation' | 'Timer'>;
 
 export type VisualStage = 'Cross' | 'F2L' | 'OLL' | 'PLL';
 
