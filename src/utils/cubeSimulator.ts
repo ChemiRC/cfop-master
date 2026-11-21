@@ -1,4 +1,4 @@
-import type { LearningStage } from '../types/cfop';
+import type { VisualStage } from '../types/cfop';
 import { splitAlgMoves } from './algHelpers';
 
 export type FaceCode = 'U' | 'D' | 'F' | 'B' | 'R' | 'L';
@@ -263,48 +263,71 @@ function invertToken(token: string): string {
 }
 
 /**
- * Si un algoritmo incluye giros wide/slice que rotan los centros, reorienta
- * el cubo completo para que el centro U quede arriba (0,1,0) y F al frente (0,0,1).
+ * Reorienta únicamente el eje vertical para mantener la cara U arriba (0,1,0)
+ * cuando un algoritmo tiene giros wide/slice/x/z sin cerrar, preservando
+ * la rotación horizontal (y / y' / y2) para coincidir con <twisty-player>
+ * y mostrar siempre el slot frontal-derecho (FR) en F2L.
  */
-function normalizeCubeOrientation(cubies: CubieState[]): void {
-  const findCenterPos = (hx: number, hy: number, hz: number): Vec3 | undefined =>
+function alignUOnTop(cubies: CubieState[]): void {
+  const uPos = cubies.find(
+    (c) => c.homePos.x === 0 && c.homePos.y === 1 && c.homePos.z === 0
+  )?.pos;
+  if (!uPos) return;
+
+  if (uPos.y === -1) {
+    applySingleQuantumMove(cubies, 'x', false);
+    applySingleQuantumMove(cubies, 'x', false);
+  } else if (uPos.z === 1) {
+    applySingleQuantumMove(cubies, 'x', false);
+  } else if (uPos.z === -1) {
+    applySingleQuantumMove(cubies, 'x', true);
+  } else if (uPos.x === 1) {
+    applySingleQuantumMove(cubies, 'z', true);
+  } else if (uPos.x === -1) {
+    applySingleQuantumMove(cubies, 'z', false);
+  }
+}
+
+interface HorizontalFrame {
+  /** Current position of home F-center (0,0,1) */
+  cF: Vec3;
+  /** Current position of home R-center (1,0,0) */
+  cR: Vec3;
+  /** Home coordinates (hx, hz) of the slot currently sitting at Front-Right (1, *, 1) */
+  frHomeX: number;
+  frHomeZ: number;
+}
+
+function getHorizontalFrame(cubies: CubieState[]): HorizontalFrame {
+  const cF =
     cubies.find(
-      (c) => c.homePos.x === hx && c.homePos.y === hy && c.homePos.z === hz
-    )?.pos;
+      (c) => c.homePos.x === 0 && c.homePos.y === 0 && c.homePos.z === 1
+    )?.pos ?? { x: 0, y: 0, z: 1 };
+  const cR =
+    cubies.find(
+      (c) => c.homePos.x === 1 && c.homePos.y === 0 && c.homePos.z === 0
+    )?.pos ?? { x: 1, y: 0, z: 0 };
 
-  const uPos = findCenterPos(0, 1, 0);
-  if (uPos) {
-    if (uPos.y === -1) {
-      applySingleQuantumMove(cubies, 'x', false);
-      applySingleQuantumMove(cubies, 'x', false);
-    } else if (uPos.z === 1) {
-      applySingleQuantumMove(cubies, 'x', false);
-    } else if (uPos.z === -1) {
-      applySingleQuantumMove(cubies, 'x', true);
-    } else if (uPos.x === 1) {
-      applySingleQuantumMove(cubies, 'z', true);
-    } else if (uPos.x === -1) {
-      applySingleQuantumMove(cubies, 'z', false);
-    }
-  }
+  const frontCenter = cubies.find(
+    (c) => c.pos.x === 0 && c.pos.y === 0 && c.pos.z === 1
+  );
+  const rightCenter = cubies.find(
+    (c) => c.pos.x === 1 && c.pos.y === 0 && c.pos.z === 0
+  );
 
-  const fPos = findCenterPos(0, 0, 1);
-  if (fPos) {
-    if (fPos.z === -1) {
-      applySingleQuantumMove(cubies, 'y', false);
-      applySingleQuantumMove(cubies, 'y', false);
-    } else if (fPos.x === 1) {
-      applySingleQuantumMove(cubies, 'y', false);
-    } else if (fPos.x === -1) {
-      applySingleQuantumMove(cubies, 'y', true);
-    }
-  }
+  const frHomeX =
+    (frontCenter?.homePos.x ?? 0) + (rightCenter?.homePos.x ?? 1);
+  const frHomeZ =
+    (frontCenter?.homePos.z ?? 1) + (rightCenter?.homePos.z ?? 0);
+
+  return { cF, cR, frHomeX, frHomeZ };
 }
 
 function getStickerColorForStage(
   cubie: CubieState,
   sticker: StickerState,
-  stage: LearningStage
+  stage: VisualStage,
+  frame: HorizontalFrame
 ): StickerCell {
   const { homePos } = cubie;
   const isUPiece = homePos.y === 1;
@@ -355,12 +378,12 @@ function getStickerColorForStage(
   if (stage === 'F2L') {
     if (isF2LPiece) {
       const isTargetFRPair =
-        homePos.x === 1 && homePos.z === 1 && homePos.y <= 0;
+        homePos.x === frame.frHomeX &&
+        homePos.z === frame.frHomeZ &&
+        homePos.y <= 0;
       return {
         face: sticker.homeFace,
-        color: isTargetFRPair
-          ? FACE_COLORS[sticker.homeFace]
-          : FACE_COLORS[sticker.homeFace],
+        color: FACE_COLORS[sticker.homeFace],
         masked: !isTargetFRPair,
       };
     }
@@ -387,7 +410,11 @@ function getStickerColorForStage(
   return { face: sticker.homeFace, color: IGNORED_COLOR, masked: true };
 }
 
-function computePllArrows(cubies: CubieState[]): PllArrow[] {
+function computePllArrows(
+  cubies: CubieState[],
+  frame: HorizontalFrame
+): PllArrow[] {
+  const { cF, cR } = frame;
   const rawMoves: Array<{
     fromRow: number;
     fromCol: number;
@@ -400,8 +427,12 @@ function computePllArrows(cubies: CubieState[]): PllArrow[] {
     if (cubie.pos.y !== 1 || cubie.homePos.y !== 1) continue;
     const fromRow = cubie.pos.z + 1;
     const fromCol = cubie.pos.x + 1;
-    const toRow = cubie.homePos.z + 1;
-    const toCol = cubie.homePos.x + 1;
+
+    // Target position relative to current horizontal center orientation (supports y / y' / y2)
+    const targetX = cubie.homePos.x * cR.x + cubie.homePos.z * cF.x;
+    const targetZ = cubie.homePos.x * cR.z + cubie.homePos.z * cF.z;
+    const toRow = targetZ + 1;
+    const toCol = targetX + 1;
 
     if (fromRow === toRow && fromCol === toCol) continue;
 
@@ -477,7 +508,7 @@ export interface SimulatedCaseView {
  */
 export function simulateCasePreState(
   alg: string,
-  stage: LearningStage
+  stage: VisualStage
 ): SimulatedCaseView {
   const cubies = createSolvedCube();
   const tokens = splitAlgMoves(alg);
@@ -495,7 +526,8 @@ export function simulateCasePreState(
     }
   }
 
-  normalizeCubeOrientation(cubies);
+  alignUOnTop(cubies);
+  const frame = getHorizontalFrame(cubies);
 
   const fallbackCell: StickerCell = {
     face: 'U',
@@ -519,7 +551,7 @@ export function simulateCasePreState(
       (s) => s.normal.x === nx && s.normal.y === ny && s.normal.z === nz
     );
     if (!st) return fallbackCell;
-    return getStickerColorForStage(cubie, st, stage);
+    return getStickerColorForStage(cubie, st, stage, frame);
   };
 
   const topGrid: StickerCell[][] = [-1, 0, 1].map((z) =>
@@ -547,7 +579,7 @@ export function simulateCasePreState(
     [1, 0, -1].map((z) => findSticker(1, y, z, 1, 0, 0))
   );
 
-  const pllArrows = stage === 'PLL' ? computePllArrows(cubies) : [];
+  const pllArrows = stage === 'PLL' ? computePllArrows(cubies, frame) : [];
 
   return {
     topGrid,

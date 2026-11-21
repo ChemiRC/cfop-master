@@ -1,9 +1,21 @@
-import type { CfopCase, NotationCategory, NotationMove } from '../types/cfop';
+import type { CfopCase, LearningStage, NotationCategory, NotationMove } from '../types/cfop';
+import {
+  CFOP_REDUCIDO_CASES,
+  CFOP_REDUCIDO_CHAPTERS,
+  CFOP_REDUCIDO_CORE_IDS,
+  CFOP_REDUCIDO_SUBCATEGORIES,
+  CFOP_REDUCIDO_VIDEO_URL,
+} from './cfopReducidoData';
 import { ESSENTIAL_F2L_IDS, F2L_CASES, F2L_SUBCATEGORIES } from './f2lData';
 import { OLL_CASES, OLL_SUBCATEGORIES, TWO_LOOK_OLL_IDS } from './ollData';
 import { PLL_CASES, PLL_SUBCATEGORIES, TWO_LOOK_PLL_IDS } from './pllData';
 
 export {
+  CFOP_REDUCIDO_CASES,
+  CFOP_REDUCIDO_CHAPTERS,
+  CFOP_REDUCIDO_CORE_IDS,
+  CFOP_REDUCIDO_SUBCATEGORIES,
+  CFOP_REDUCIDO_VIDEO_URL,
   ESSENTIAL_F2L_IDS,
   F2L_CASES,
   F2L_SUBCATEGORIES,
@@ -570,12 +582,15 @@ export const CROSS_CASES: CfopCase[] = [
     code: 'CROSS 01',
     name: 'Inserción Directa en 1 Giro',
     stage: 'Cross',
+    category: 'Inserciones Directas',
     subcategory: 'Inserciones Directas',
-    isTwoLook: true,
+    twoLook: true,
     alg: 'U F2',
+    altAlgs: [],
     recognition: 'Arista en capa U con el sticker de la cruz mirando hacia arriba.',
     explanation:
       'Alinea la arista con su centro lateral mediante U y bájala directo a la base D con F2.',
+    triggers: [],
     tags: ['Directa'],
     grip: 'Home grip (cruz abajo en D)',
     auf: 'Alinear centros con D',
@@ -585,13 +600,16 @@ export const CROSS_CASES: CfopCase[] = [
     code: 'CROSS 02',
     name: 'Rescate desde Capa Media',
     stage: 'Cross',
+    category: 'Inserciones Directas',
     subcategory: 'Inserciones Directas',
-    isTwoLook: true,
+    twoLook: true,
     alg: "R' D'",
+    altAlgs: [],
     recognition:
       'Arista atrapada en el cinturón central (FR) lista para bajar con un giro lateral.',
     explanation:
       "Bájala con R' a una posición relativa de la base y alinea toda la cruz al final con D'. Ahorras 2 movimientos frente a subirla a U.",
+    triggers: [],
     tags: ['Directa', 'Capa media'],
     grip: 'Home grip',
     auf: "Alinear cruz al final con D'",
@@ -601,14 +619,16 @@ export const CROSS_CASES: CfopCase[] = [
     code: 'CROSS 03',
     name: 'Arista Invertida en Frente (Flipped Edge)',
     stage: 'Cross',
+    category: 'Aristas Invertidas',
     subcategory: 'Aristas Invertidas',
-    isTwoLook: true,
+    twoLook: true,
     alg: "U' R' F R",
     altAlg: "F' R' D' R",
     altAlgs: ["F' R' D' R"],
     recognition: 'Arista en UF con el color de la cruz mirando hacia ti (desorientada para F2).',
     explanation:
       "Muévela a un lado con U', bájala a la capa media con R', insértala en DF con F y restaura la arista derecha con R.",
+    triggers: [],
     tags: ['Invertida'],
     grip: 'Home grip',
     auf: "Despejar slot con U'",
@@ -618,7 +638,9 @@ export const CROSS_CASES: CfopCase[] = [
     code: 'CROSS 04',
     name: 'Arista Invertida en el Slot Inferior',
     stage: 'Cross',
+    category: 'Aristas Invertidas',
     subcategory: 'Aristas Invertidas',
+    twoLook: false,
     alg: "F' D' R' D",
     altAlg: "F R' D' R",
     altAlgs: ["F R' D' R"],
@@ -626,6 +648,7 @@ export const CROSS_CASES: CfopCase[] = [
       'La arista ya está en su lugar de la base (DF) pero volteada al revés.',
     explanation:
       "Sácala a la capa media con F', desplaza la base con D', bájala bien orientada con R' y regresa la base con D.",
+    triggers: [],
     tags: ['Invertida', 'En base'],
     grip: 'Home grip',
     auf: 'Restaurar D al final',
@@ -635,12 +658,16 @@ export const CROSS_CASES: CfopCase[] = [
     code: 'CROSS 05',
     name: 'Doble Inserción Simultánea (2×1 en Cinturón)',
     stage: 'Cross',
+    category: 'Cruz Relativa (Avanzado)',
     subcategory: 'Cruz Relativa (Avanzado)',
+    twoLook: false,
     alg: "R' F R",
+    altAlgs: [],
     recognition:
       'Una arista en FR lista para ir a DF y otra en DR que debe conservarse.',
     explanation:
       "Usa R' para proteger o preparar una arista lateral, F para insertar la frontal y R para insertar la derecha en un solo flujo.",
+    triggers: [],
     tags: ['Cruz relativa', 'Capa media'],
     grip: 'Home grip',
     auf: 'Sin ajuste adicional',
@@ -650,19 +677,24 @@ export const CROSS_CASES: CfopCase[] = [
     code: 'CROSS 06',
     name: 'Cruz Relativa Opuesta con Ajuste D2',
     stage: 'Cross',
+    category: 'Cruz Relativa (Avanzado)',
     subcategory: 'Cruz Relativa (Avanzado)',
+    twoLook: false,
     alg: 'R2 L2 D2',
+    altAlgs: [],
     recognition:
       'Dos aristas de la cruz en U están sobre los centros opuestos a los suyos (L en R y R en L).',
     explanation:
       'Bájalas directamente en los lados opuestos con R2 L2 y corrige toda la base al final con un solo D2.',
+    triggers: [],
     tags: ['Cruz relativa'],
     grip: 'Home grip',
     auf: 'Ajuste final D2',
   },
 ];
 
-export const CFOP_SUBCATEGORIES: Record<'Cross' | 'F2L' | 'OLL' | 'PLL', string[]> = {
+export const CFOP_SUBCATEGORIES: Record<LearningStage, string[]> = {
+  Reducido: CFOP_REDUCIDO_SUBCATEGORIES,
   Cross: [
     'Todos',
     'Inserciones Directas',
@@ -675,6 +707,7 @@ export const CFOP_SUBCATEGORIES: Record<'Cross' | 'F2L' | 'OLL' | 'PLL', string[
 };
 
 export const CFOP_CASES: CfopCase[] = [
+  ...CFOP_REDUCIDO_CASES,
   ...CROSS_CASES,
   ...F2L_CASES,
   ...OLL_CASES,

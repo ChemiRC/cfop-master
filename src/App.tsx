@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronUp, X } from 'lucide-react';
 import {
   CFOP_CASES,
+  CFOP_REDUCIDO_CASES,
   FUNDAMENTAL_TRIGGERS,
   NOTATION_MOVES,
   type TriggerDemo,
@@ -14,27 +15,41 @@ import type {
   ActiveSelection,
   CfopCase,
   CfopStage,
-  LearningStage,
   NotationMove,
+  VisualStage,
 } from './types/cfop';
 import { mirrorAlgLR } from './utils/algHelpers';
 import { triggerHaptic } from './utils/haptics';
 
 const DESKTOP_QUERY = '(min-width: 1024px)';
 const SWIPE_CLOSE_THRESHOLD = 90;
+const REDUCIDO_LEARNED_STORAGE_KEY = 'cfop_reducido_learned';
+
+function resolveVisualStage(c: CfopCase): VisualStage {
+  if (c.visualStage) return c.visualStage;
+  if (c.stage === 'Reducido') return 'OLL';
+  return c.stage;
+}
 
 function caseToSelection(c: CfopCase, autoPlayNonce?: number): ActiveSelection {
+  const visualStage = resolveVisualStage(c);
   return {
     id: c.id,
     code: c.code,
     title: c.name,
-    subtitle: `${c.stage} · ${c.subcategory}`,
+    subtitle: `${c.stage === 'Reducido' ? 'CFOP Reducido' : c.stage} · ${c.category}`,
     alg: c.alg,
     altAlg: c.altAlg,
     altAlgs: c.altAlgs,
-    isTwoLook: c.isTwoLook,
+    altAlgLabels: c.altAlgLabels,
+    guideNote: c.guideNote,
+    sectionBadge: c.sectionBadge,
+    videoTimestamp: c.videoTimestamp,
+    videoUrl: c.videoUrl,
+    twoLook: c.twoLook,
     stage: c.stage,
-    stickering: c.stage,
+    visualStage,
+    stickering: visualStage,
     setupAnchor: 'end',
     recognition: c.recognition,
     explanation: c.explanation,
@@ -52,11 +67,14 @@ function moveToSelection(m: NotationMove, nonce: number): ActiveSelection {
     title: m.name,
     subtitle: `${m.faceLabel} · ${m.directionLabel}`,
     alg: m.move,
+    altAlgs: [],
+    twoLook: false,
     stage: 'Notation',
     stickering: 'full',
     setupAnchor: 'start',
     recognition: m.description,
     explanation: m.fingertrickTip,
+    tags: [],
     autoPlayNonce: nonce,
   };
 }
@@ -64,14 +82,22 @@ function moveToSelection(m: NotationMove, nonce: number): ActiveSelection {
 const NAV_ITEMS: Array<{
   id: CfopStage;
   label: string;
+  mobileLabel: string;
   count?: number;
   dotColor?: string;
 }> = [
-  { id: 'Notation', label: 'Notación' },
-  { id: 'Cross', label: 'Cross', count: 6, dotColor: 'bg-[#F4F4F5]' },
-  { id: 'F2L', label: 'F2L', count: 41, dotColor: 'bg-[#3B82F6]' },
-  { id: 'OLL', label: 'OLL', count: 57, dotColor: 'bg-[#EAB308]' },
-  { id: 'PLL', label: 'PLL', count: 21, dotColor: 'bg-[#EF4444]' },
+  { id: 'Notation', label: 'Notación', mobileLabel: 'Notac.' },
+  {
+    id: 'Reducido',
+    label: 'Reducido',
+    mobileLabel: 'Reduc.',
+    count: CFOP_REDUCIDO_CASES.length,
+    dotColor: 'bg-[#10B981]',
+  },
+  { id: 'Cross', label: 'Cross', mobileLabel: 'Cross', count: 6, dotColor: 'bg-[#F4F4F5]' },
+  { id: 'F2L', label: 'F2L', mobileLabel: 'F2L', count: 41, dotColor: 'bg-[#3B82F6]' },
+  { id: 'OLL', label: 'OLL', mobileLabel: 'OLL', count: 57, dotColor: 'bg-[#EAB308]' },
+  { id: 'PLL', label: 'PLL', mobileLabel: 'PLL', count: 21, dotColor: 'bg-[#EF4444]' },
 ];
 
 function isDesktop(): boolean {
@@ -97,6 +123,48 @@ export const App: React.FC = () => {
     }
     return false;
   });
+
+  // Progreso local de CFOP Reducido persistido en localStorage
+  const [reducidoLearnedIds, setReducidoLearnedIds] = useState<Set<string>>(
+    () => {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const raw = window.localStorage.getItem(REDUCIDO_LEARNED_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              return new Set(
+                parsed.filter((item): item is string => typeof item === 'string')
+              );
+            }
+          }
+        }
+      } catch {
+        // Ignore corrupted storage
+      }
+      return new Set();
+    }
+  );
+
+  const toggleReducidoLearned = useCallback((caseId: string) => {
+    setReducidoLearnedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(caseId)) {
+        next.delete(caseId);
+      } else {
+        next.add(caseId);
+      }
+      try {
+        window.localStorage.setItem(
+          REDUCIDO_LEARNED_STORAGE_KEY,
+          JSON.stringify(Array.from(next))
+        );
+      } catch {
+        // Ignore storage errors
+      }
+      return next;
+    });
+  }, []);
 
   const toggleLeftyMode = useCallback(() => {
     setIsLeftyMode((prev) => {
@@ -152,12 +220,15 @@ export const App: React.FC = () => {
         title: trig.name,
         subtitle: 'Secuencia base',
         alg: trig.alg,
+        altAlgs: [],
+        twoLook: false,
         stage: 'Notation',
         stickering: 'full',
         setupAnchor: 'end',
         recognition: trig.description,
         explanation:
           'Practícalo a 0.5x y sube la velocidad cuando salga sin pausas.',
+        tags: [],
         autoPlayNonce: Date.now(),
       });
       openSheetOnMobile();
@@ -225,14 +296,20 @@ export const App: React.FC = () => {
     const stageCases = CFOP_CASES.filter((c) => c.stage === activeTab);
     const idx =
       Math.max(0, stageCases.findIndex((c) => c.id === selection.id)) + 1;
-    return `${idx}/${stageCases.length} ${activeTab}`;
+    const label = activeTab === 'Reducido' ? 'RED' : activeTab;
+    return `${idx}/${stageCases.length} ${label}`;
   }, [activeTab, selection.id]);
 
-  const dockPreviewStage: LearningStage =
-    selection.stage === 'Notation' ? 'F2L' : selection.stage;
+  const dockPreviewStage: VisualStage =
+    selection.visualStage ??
+    (selection.stage === 'Notation' || selection.stage === 'Reducido'
+      ? 'F2L'
+      : selection.stage);
   const dockDisplayAlg = isLeftyMode
     ? mirrorAlgLR(selection.alg)
     : selection.alg;
+
+  const isSelectionReducido = selection.stage === 'Reducido';
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col text-zinc-100">
@@ -242,7 +319,7 @@ export const App: React.FC = () => {
           <button
             type="button"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-2.5"
+            className="flex shrink-0 items-center gap-2.5"
             aria-label="CFOP Master, volver arriba"
           >
             <span
@@ -272,7 +349,7 @@ export const App: React.FC = () => {
                   type="button"
                   onClick={() => handleTabChange(item.id)}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors ${
+                  className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
                     isActive
                       ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
                       : 'text-zinc-400 hover:bg-[#16161A] hover:text-zinc-200'
@@ -299,7 +376,7 @@ export const App: React.FC = () => {
           </nav>
 
           {/* Controles rápidos de la derecha: Modo Zurdo + Métrica */}
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={toggleLeftyMode}
@@ -346,6 +423,12 @@ export const App: React.FC = () => {
               selectedCaseId={selection.id}
               onSelectCase={handleSelectCase}
               isLeftyGlobal={isLeftyMode}
+              learnedIds={
+                activeTab === 'Reducido' ? reducidoLearnedIds : undefined
+              }
+              onToggleLearned={
+                activeTab === 'Reducido' ? toggleReducidoLearned : undefined
+              }
             />
           )}
         </div>
@@ -395,14 +478,29 @@ export const App: React.FC = () => {
           </div>
 
           <div className="no-scrollbar max-lg:pb-safe-2 max-lg:min-h-0 max-lg:flex-1 max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:px-2 lg:sticky lg:top-16 lg:max-h-[calc(100vh-4.5rem)] lg:overflow-y-auto">
-            <CubeViewer selection={selection} isLeftyGlobal={isLeftyMode} />
+            <CubeViewer
+              selection={selection}
+              isLeftyGlobal={isLeftyMode}
+              isLearned={
+                isSelectionReducido
+                  ? reducidoLearnedIds.has(selection.id)
+                  : undefined
+              }
+              onToggleLearned={
+                isSelectionReducido
+                  ? () => toggleReducidoLearned(selection.id)
+                  : undefined
+              }
+            />
           </div>
         </aside>
       </main>
 
       <footer className="hidden border-t border-[#222226] py-4 lg:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 font-mono text-[11px] text-zinc-600">
-          <span>CFOP Master · 125 Algoritmos WCA (Cross, 41 F2L, 57 OLL, 21 PLL)</span>
+          <span>
+            CFOP Master · 17 CFOP Reducido + 125 Full CFOP (Cross, 41 F2L, 57 OLL, 21 PLL)
+          </span>
           <span>Notación WCA · cubing.js · PWA</span>
         </div>
       </footer>
@@ -463,7 +561,7 @@ export const App: React.FC = () => {
 
         <nav
           aria-label="Etapas"
-          className="mt-2 grid grid-cols-5 gap-0.5 rounded-lg border border-[#222226] bg-[#111113] p-0.5"
+          className="mt-2 grid grid-cols-6 gap-0.5 rounded-lg border border-[#222226] bg-[#111113] p-0.5"
         >
           {NAV_ITEMS.map((item) => {
             const isActive = activeTab === item.id;
@@ -473,7 +571,7 @@ export const App: React.FC = () => {
                 type="button"
                 onClick={() => handleTabChange(item.id)}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex h-11 items-center justify-center gap-1 rounded-md text-[11px] font-medium transition-colors ${
+                className={`flex h-11 items-center justify-center gap-1 rounded-md px-0.5 text-[10px] font-medium transition-colors sm:text-[11px] ${
                   isActive
                     ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
                     : 'text-zinc-400'
@@ -484,7 +582,7 @@ export const App: React.FC = () => {
                     className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.dotColor}`}
                   />
                 )}
-                <span>{item.label}</span>
+                <span className="truncate">{item.mobileLabel}</span>
               </button>
             );
           })}

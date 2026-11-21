@@ -1,6 +1,14 @@
-export type CfopStage = 'Notation' | 'Cross' | 'F2L' | 'OLL' | 'PLL';
+export type CfopStage =
+  | 'Notation'
+  | 'Reducido'
+  | 'Cross'
+  | 'F2L'
+  | 'OLL'
+  | 'PLL';
 
 export type LearningStage = Exclude<CfopStage, 'Notation'>;
+
+export type VisualStage = 'Cross' | 'F2L' | 'OLL' | 'PLL';
 
 export type StickeringType = 'full' | 'Cross' | 'F2L' | 'OLL' | 'PLL';
 
@@ -22,27 +30,44 @@ export interface CfopCase {
   code: string;
   name: string;
   stage: LearningStage;
+  /** Etapa visual/stickering real para el diagrama 2D y el visor 3D (útil en CFOP Reducido) */
+  visualStage?: VisualStage;
+  /** Familia/categoría oficial del caso */
+  category: string;
+  /** Alias de categoría para compatibilidad con filtros y UI */
   subcategory: string;
-  /** Clean WCA algorithm string passed directly to <twisty-player> */
+  /** Etiqueta compacta de bloque/subsección (ej. 'OLL', 'Consejos Cruz', 'PLL Esquinas') */
+  sectionBadge?: string;
+  /** Algoritmo principal en notación WCA limpia compatible con <twisty-player> */
   alg: string;
-  /** Optional alternative algorithm (legacy single string) */
+  /** Variantes secundarias en notación WCA limpia */
+  altAlgs: string[];
+  /** Opcional legacy: primera alternativa rápida */
   altAlg?: string;
-  /** Optional list of alternative algorithms (e.g. R U variant vs M U variant) */
-  altAlgs?: string[];
-  /** True if part of 2-Look OLL or 2-Look PLL subset */
-  isTwoLook?: boolean;
-  /** Recognition cue: patterns, headlights, blocks, bars */
+  /** Etiquetas descriptivas para [principal, alt1, alt2...] (ej. '2da forma', 'SUN+ANTISUN') */
+  altAlgLabels?: string[];
+  /** Nota o etiqueta original de la guía (ej. 'F (Sexy)×3 F\'', '2da forma', 'SUN+ANTISUN') */
+  guideNote?: string;
+  /** Marca de tiempo del video guía (ej. '02:16') */
+  videoTimestamp?: string;
+  /** Enlace directo al video con marca de tiempo */
+  videoUrl?: string;
+  /** Indica si pertenece al subconjunto esencial 2-Look OLL / 2-Look PLL / F2L básico */
+  twoLook: boolean;
+  /** Clave de reconocimiento visual: patrones, faros, bloques, barras */
   recognition: string;
-  /** Clear Spanish explanation & fingertrick advice */
+  /** Explicación en español y consejos de fingertricks */
   explanation: string;
-  /** Named triggers present in this algorithm */
-  triggers?: string[];
-  /** Visual recognition tags (e.g. 'Faros', 'Barra 1×3', 'Bloque 2×2', 'Diagonal', 'Cruz') */
-  tags?: string[];
-  /** Recommended starting grip (e.g. 'Home grip (pulgares en F)', 'Regrip pulgar en U') */
-  grip?: string;
-  /** Frequent AUF (Adjust Upper Face) notes */
-  auf?: string;
+  /** Triggers presentes en el algoritmo */
+  triggers: string[];
+  /** Etiquetas visuales rápidas (e.g. 'Faros', 'Barra 1×3', 'Bloque 2×2') */
+  tags: string[];
+  /** Agarre recomendado al iniciar */
+  grip: string;
+  /** Orientación / AUF recomendada antes de ejecutar */
+  auf: string;
+  /** Setup opcional de SpeedCubeDB */
+  setup?: string;
 }
 
 export interface ActiveSelection {
@@ -52,14 +77,20 @@ export interface ActiveSelection {
   subtitle: string;
   alg: string;
   altAlg?: string;
-  altAlgs?: string[];
-  isTwoLook?: boolean;
+  altAlgs: string[];
+  altAlgLabels?: string[];
+  guideNote?: string;
+  sectionBadge?: string;
+  videoTimestamp?: string;
+  videoUrl?: string;
+  twoLook: boolean;
   stage: CfopStage;
+  visualStage?: VisualStage;
   stickering: StickeringType;
   setupAnchor: 'start' | 'end';
   recognition: string;
   explanation: string;
-  tags?: string[];
+  tags: string[];
   grip?: string;
   auf?: string;
   autoPlayNonce?: number;

@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
+  CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Copy,
+  ExternalLink,
   Pause,
   Play,
   RotateCcw,
@@ -13,11 +15,11 @@ import {
 import type {
   ActiveSelection,
   CfopStage,
-  LearningStage,
   StickeringType,
   TwistyCoarseTimelineInfo,
   TwistyCurrentMoveInfo,
   TwistyPlayerElement,
+  VisualStage,
 } from '../types/cfop';
 import { mirrorAlgLR, splitAlgMoves } from '../utils/algHelpers';
 import { triggerHaptic } from '../utils/haptics';
@@ -27,6 +29,8 @@ import { Cube2DPreview } from './Cube2DPreview';
 interface CubeViewerProps {
   selection: ActiveSelection;
   isLeftyGlobal?: boolean;
+  isLearned?: boolean;
+  onToggleLearned?: () => void;
 }
 
 const SPEED_SEGMENTS = [
@@ -53,6 +57,7 @@ const STAGE_ACCENTS: Record<
   { label: string; dotClass: string; textClass: string }
 > = {
   Notation: { label: 'WCA', dotClass: 'bg-[#FAFAFA]', textClass: 'text-[#FAFAFA]' },
+  Reducido: { label: 'REDUCIDO', dotClass: 'bg-[#10B981]', textClass: 'text-[#10B981]' },
   Cross: { label: 'CROSS', dotClass: 'bg-[#F4F4F5]', textClass: 'text-[#F4F4F5]' },
   F2L: { label: 'F2L', dotClass: 'bg-[#3B82F6]', textClass: 'text-[#3B82F6]' },
   OLL: { label: 'OLL', dotClass: 'bg-[#EAB308]', textClass: 'text-[#EAB308]' },
@@ -88,6 +93,8 @@ IsolatedTwistyHost.displayName = 'IsolatedTwistyHost';
 export const CubeViewer: React.FC<CubeViewerProps> = ({
   selection,
   isLeftyGlobal,
+  isLearned,
+  onToggleLearned,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<TwistyPlayerElement | null>(null);
@@ -95,7 +102,16 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
   const [playerReady, setPlayerReady] = useState<boolean>(false);
   const [cdnTimedOut, setCdnTimedOut] = useState<boolean>(false);
 
-  const [tempoScale, setTempoScale] = useState<number>(1);
+  const [tempoScale, setTempoScale] = useState<number>(() => {
+    try {
+      const saved = window.localStorage.getItem('cfop_tempo_scale');
+      const parsed = saved ? Number(saved) : 1;
+      if ([0.25, 0.5, 1, 1.5, 2].includes(parsed)) return parsed;
+    } catch {
+      // Ignore storage errors
+    }
+    return 1;
+  });
   const [viewMode, setViewMode] = useState<'3D' | '2D'>('3D');
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>('right');
   const [isMirrored, setIsMirrored] = useState<boolean>(Boolean(isLeftyGlobal));
@@ -314,6 +330,11 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
   ]);
 
   useEffect(() => {
+    try {
+      window.localStorage.setItem('cfop_tempo_scale', String(tempoScale));
+    } catch {
+      // Ignore storage errors
+    }
     const player = playerRef.current;
     if (!player || !playerReady) return;
     try {
@@ -488,8 +509,11 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
   }, [effectiveAlg]);
 
   const stageAccent = STAGE_ACCENTS[selection.stage] ?? STAGE_ACCENTS.Notation;
-  const previewStageFor2D: LearningStage =
-    selection.stage === 'Notation' ? 'F2L' : selection.stage;
+  const previewStageFor2D: VisualStage =
+    selection.visualStage ??
+    (selection.stage === 'Notation' || selection.stage === 'Reducido'
+      ? 'F2L'
+      : selection.stage);
   const isNotation = selection.stage === 'Notation';
 
   return (
@@ -505,7 +529,12 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
         <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-[#FAFAFA]">
           {selection.title}
         </h2>
-        {selection.isTwoLook && (
+        {selection.sectionBadge && (
+          <span className="hidden rounded border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 font-mono text-[10px] font-medium text-zinc-300 sm:inline">
+            {selection.sectionBadge}
+          </span>
+        )}
+        {!selection.sectionBadge && selection.twoLook && (
           <span className="hidden rounded border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 font-mono text-[10px] font-medium text-zinc-300 sm:inline">
             2-LOOK
           </span>
@@ -514,6 +543,31 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
           <span className="rounded border border-[#3B82F6]/40 bg-[#3B82F6]/10 px-1.5 py-0.5 font-mono text-[10px] font-medium text-[#3B82F6]">
             L↔R
           </span>
+        )}
+        {onToggleLearned && (
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('success');
+              onToggleLearned();
+            }}
+            aria-pressed={Boolean(isLearned)}
+            title={
+              isLearned
+                ? 'Marcar como pendiente'
+                : 'Marcar como aprendido (guardado localmente)'
+            }
+            className={`inline-flex h-8 shrink-0 items-center gap-1 rounded-md border px-2 font-mono text-[11px] transition-colors ${
+              isLearned
+                ? 'border-[#10B981]/50 bg-[#10B981]/15 text-[#10B981]'
+                : 'border-[#222226] bg-[#09090B] text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+            }`}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">
+              {isLearned ? 'Aprendido' : 'Marcar'}
+            </span>
+          </button>
         )}
         <button
           type="button"
@@ -659,6 +713,9 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
           </span>
           {availableAlgs.map((algVariant, idx) => {
             const active = selectedAlgIndex === idx;
+            const label =
+              selection.altAlgLabels?.[idx] ??
+              (idx === 0 ? 'Principal' : `Alt ${idx}`);
             return (
               <button
                 key={idx}
@@ -674,27 +731,40 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
                     : 'border-[#222226] bg-[#141418] text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                <span>{idx === 0 ? 'Principal' : `Alt ${idx}`}</span>
+                <span>{label}</span>
               </button>
             );
           })}
         </div>
       )}
 
-      {/* Guía Ergonómica Técnica: Agarre Inicial y AUF */}
-      {(selection.grip || selection.auf) && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-[#222226] bg-[#0C0C0E] px-3 py-1.5 font-mono text-[11px] tabular-nums text-zinc-400">
-          {selection.grip && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-zinc-600">AGARRE:</span>
-              <span className="text-zinc-200">{selection.grip}</span>
-            </div>
-          )}
-          {selection.auf && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-zinc-600">AUF:</span>
-              <span className="text-zinc-200">{selection.auf}</span>
-            </div>
+      {/* Guía Ergonómica Técnica: Agarre Inicial, AUF y Video Timestamp (CFOP Reducido) */}
+      {(selection.grip || selection.auf || selection.videoUrl) && (
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-[#222226] bg-[#0C0C0E] px-3 py-1.5 font-mono text-[11px] tabular-nums text-zinc-400">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            {selection.grip && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-zinc-600">AGARRE:</span>
+                <span className="text-zinc-200">{selection.grip}</span>
+              </div>
+            )}
+            {selection.auf && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-zinc-600">AUF:</span>
+                <span className="text-zinc-200">{selection.auf}</span>
+              </div>
+            )}
+          </div>
+          {selection.videoUrl && selection.videoTimestamp && (
+            <a
+              href={selection.videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 items-center gap-1 rounded border border-[#10B981]/40 bg-[#10B981]/10 px-2 py-0.5 font-mono text-[10px] font-medium text-[#10B981] transition-colors hover:bg-[#10B981]/20"
+            >
+              <span>▶ {selection.videoTimestamp} · Video JS cuber</span>
+              <ExternalLink className="h-3 w-3" />
+            </a>
           )}
         </div>
       )}

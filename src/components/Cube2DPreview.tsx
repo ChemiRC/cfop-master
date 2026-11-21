@@ -1,5 +1,5 @@
 import React, { useId, useMemo } from 'react';
-import type { LearningStage } from '../types/cfop';
+import type { VisualStage } from '../types/cfop';
 import {
   simulateCasePreState,
   type PllArrow,
@@ -8,7 +8,7 @@ import {
 
 interface Cube2DPreviewProps {
   alg: string;
-  stage: LearningStage;
+  stage: VisualStage;
 }
 
 function quadPoints(
