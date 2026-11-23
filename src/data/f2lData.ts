@@ -35,7 +35,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: true,
     alg: "U R U' R'",
     altAlgs: ["R' F R F'", "y' r' U' R U M'"],
-    altAlg: "R' F R F'",
     setup: "F R' F' R",
     recognition:
       'Esquina en UFR (blanco al frente) y arista en UF con colores superiores opuestos, listas para unirse.',
@@ -56,7 +55,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: true,
     alg: "F R' F' R",
     altAlgs: ["y' U' R' U R", "U' F' U F"],
-    altAlg: "y' U' R' U R",
     setup: "R' F R F'",
     recognition:
       'Esquina en UFR (blanco a la derecha) y arista en UR listas para insertarse por el frente.',
@@ -77,7 +75,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: true,
     alg: "F' U' F",
     altAlgs: ["y' R' U' R", "y L' U' L"],
-    altAlg: "y' R' U' R",
     setup: "F' U F",
     recognition:
       'Esquina en UFR y arista en UB ya emparejadas para bajar directamente por la cara frontal.',
@@ -98,7 +95,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: true,
     alg: "R U R'",
     altAlgs: ["y' f R f'", "y F U F'"],
-    altAlg: "y' f R f'",
     setup: "R U' R'",
     recognition:
       'Esquina en UFR (blanco a la derecha) y arista en UL listas para unirse en 1 giro R.',
@@ -119,7 +115,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: true,
     alg: "U' R U R' U2 R U' R'",
     altAlgs: ["F2 L' U' L U F2", "U' R U R' U' R U2 R'"],
-    altAlg: "F2 L' U' L U F2",
     setup: "R U R' U2' R U' R' U",
     recognition:
       'Esquina en UFR (blanco a la derecha) y arista en UB con el mismo color en la cara superior.',
@@ -140,7 +135,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: true,
     alg: "U' r U' R' U R U r'",
     altAlgs: ["y' U R' U' R U2 R' U R", "d R' U' R U2 R' U R"],
-    altAlg: "y' U R' U' R U2 R' U R",
     setup: "F' U' F U2' F' U F U'",
     recognition:
       'Esquina en UFR (blanco al frente) y arista en UL con el mismo color en la cara superior.',
@@ -161,7 +155,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "U' R U2 R' U' R U2 R'",
     altAlgs: ["M' U' M U2 r U' r'", "U' R U2 R' U2 R U' R'"],
-    altAlg: "M' U' M U2 r U' r'",
     setup: "R U R' U2' R U2' R' U",
     recognition:
       'Esquina en UFR (blanco a la derecha) y arista en UL con el mismo color arriba.',
@@ -182,7 +175,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "r' U2 R2 U R2 U r",
     altAlgs: ["d R' U2 R U R' U2 R", "y' U R' U2 R U2 R' U R"],
-    altAlg: "d R' U2 R U R' U2 R",
     setup: "r' U' R2 U' R2' U2' r",
     recognition:
       'Esquina en UFR (blanco al frente) y arista en UB con el mismo color arriba.',
@@ -203,7 +195,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "U' R U' R' U F' U' F",
     altAlgs: ["F R U R' U' F' R U' R'", "U' R U' R' d R' U' R"],
-    altAlg: "F R U R' U' F' R U' R'",
     setup: "F' U F U' R U R' U",
     recognition:
       'Esquina en UFR (blanco a la derecha) y arista en UB con colores superiores opuestos.',
@@ -224,7 +215,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "U' R U R' U R U R'",
     altAlgs: ["U2 R U' R' U' R U R'", "d R' U R d' R U R'"],
-    altAlg: "U2 R U' R' U' R U R'",
     setup: "R U' R' U' R U' R' U",
     recognition:
       'Esquina en UFR (blanco al frente) y arista en UL con colores superiores opuestos.',
@@ -245,7 +235,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: true,
     alg: "U' R U2 R' U F' U' F",
     altAlgs: ["y' R U2 R2 U' R2 U' R'", "U' R U2 R' d R' U' R"],
-    altAlg: "y' R U2 R2 U' R2 U' R'",
     setup: "F' U F U' R U2' R' U",
     recognition:
       'Esquina en UFR (blanco al frente) pegada a la arista en UF con el mismo color arriba.',
@@ -266,7 +255,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "R U' R' U R U' R' U2 R U' R'",
     altAlgs: ["R' U2 R2 U R2 U R", "U F' U2 F U' R U R'"],
-    altAlg: "R' U2 R2 U R2 U R",
     setup: "R U R' U2' R U R' U' R U R'",
     recognition:
       'Esquina en UFR (blanco a la derecha) pegada a la arista en UR con el mismo color arriba.',
@@ -287,7 +275,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "y' U R' U R U' R' U' R",
     altAlgs: ["M' U' R U R' U2 R U' r'", "d R' U R U' R' U' R"],
-    altAlg: "M' U' R U R' U2 R U' r'",
     setup: "r U2' R' U R U' R' U M",
     recognition:
       'Esquina en UFR (blanco al frente) pegada a la arista en UF con colores opuestos arriba.',
@@ -308,7 +295,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "U' R U' R' U R U R'",
     altAlgs: ["R U2 R' U2 R U R' U2 R U' R'", "U' R2 D R' U R D' R2"],
-    altAlg: "R U2 R' U2 R U R' U2 R U' R'",
     setup: "R U' R' U' R U R' U",
     recognition:
       'Esquina en UFR (blanco a la derecha) pegada a la arista en UR con colores opuestos arriba.',
@@ -329,7 +315,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "M U r U' r' U' M'",
     altAlgs: ["R U R' U2 R U' R' U R U' R'", "R' D' R U' R' D R U R U' R'"],
-    altAlg: "R U R' U2 R U' R' U R U' R'",
     setup: "R U R' U' R U R' U2' R U' R'",
     recognition:
       'Esquina en UFR (blanco al frente) pegada a la arista en UR con colores laterales cruzados.',
@@ -350,7 +335,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "R U' R' U2 F' U' F",
     altAlgs: ["R U' R' U2 y' R' U' R", "U M' U R U' r' U' R U R'"],
-    altAlg: "R U' R' U2 y' R' U' R",
     setup: "F' U F U2' R U R'",
     recognition:
       'Esquina en UFR (blanco a la derecha) pegada a la arista en UF con colores laterales cruzados.',
@@ -371,7 +355,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: true,
     alg: "R U2 R' U' R U R'",
     altAlgs: ["y2 L U2 L' U' L U L'", "R U R' U' R U2 R' U2 R U R'"],
-    altAlg: "y2 L U2 L' U' L U L'",
     setup: "R U' R' U R U2' R'",
     recognition:
       'Esquina en UFR con blanco ARRIBA pegada a la arista en UR con colores frontales/laterales coincidentes.',
@@ -392,7 +375,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "y' R' U2 R U R' U' R",
     altAlgs: ["y L' U2 L U L' U' L", "F' U2 F U F' U' F"],
-    altAlg: "y L' U2 L U L' U' L",
     setup: "R U R' U' R U R' F R' F' R",
     recognition:
       'Esquina en UFR con blanco ARRIBA pegada a la arista en UF.',
@@ -413,7 +395,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "U R U2 R' U R U' R'",
     altAlgs: ["U R U2 R2 F R F'", "d f R2 f' U f R' f'"],
-    altAlg: "U R U2 R2 F R F'",
     setup: "R U R' U' R U2' R' U'",
     recognition:
       'Esquina en UFR con blanco ARRIBA y arista separada en UB (mismo color alineado con el centro R al girar U).',
@@ -434,7 +415,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "y' U' R' U2 R U' R' U R",
     altAlgs: ["U' R U' R2 F R F' R U' R'", "y U' L' U2 L U' L' U L"],
-    altAlg: "U' R U' R2 F R F' R U' R'",
     setup: "R U R' F R' F' R2' U R' U",
     recognition:
       'Esquina en UFR con blanco ARRIBA y arista separada en UL.',
@@ -455,7 +435,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "U2 R U R' U R U' R'",
     altAlgs: ["R U' R' U2 R U R'", "R B U2 B' R'"],
-    altAlg: "R U' R' U2 R U R'",
     setup: "R U' R' U2' R U R'",
     recognition:
       'Esquina en UFR con blanco ARRIBA y arista en UL con el color derecho en la cara superior.',
@@ -476,7 +455,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "r U' r' U2 r U r'",
     altAlgs: ["F' L' U2 L F", "y' U2 R' U' R U' R' U R"],
-    altAlg: "F' L' U2 L F",
     setup: "F' L' U2' L F",
     recognition:
       'Esquina en UFR con blanco ARRIBA y arista en UB con el color frontal en la cara superior.',
@@ -497,7 +475,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "U R U' R' U' R U' R' U R U' R'",
     altAlgs: ["R U R' U2 R U R' U' R U R'", "U2 R2 U2 R' U' R U' R2"],
-    altAlg: "R U R' U2 R U R' U' R U R'",
     setup: "R U' R' U R U' R' U2' R U' R'",
     recognition:
       'Esquina en UFR (blanco arriba) pegada a la arista en UF con colores laterales invertidos.',
@@ -518,7 +495,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "F U R U' R' F' R U' R'",
     altAlgs: ["U' R U R2 F R F' R U' R'", "y' R' U' R U2 R' U' R U R' U' R"],
-    altAlg: "U' R U R2 F R F' R U' R'",
     setup: "R U R' F R U R' U' F'",
     recognition:
       'Esquina en UFR (blanco arriba) pegada a la arista en UR con colores laterales invertidos.',
@@ -539,7 +515,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: true,
     alg: "U' R' F R F' R U R'",
     altAlgs: ["R' F' R U R U' R' F", "U' F' U F U R U' R'"],
-    altAlg: "R' F' R U R U' R' F",
     setup: "F' R U R' U' R' F R",
     recognition:
       'Esquina ya resuelta en el slot DFR; arista en UF con el color derecho en la cara frontal.',
@@ -560,7 +535,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "U R U' R' F R' F' R",
     altAlgs: ["R S' R' U R S R'", "U R U R' U' y L' U' L"],
-    altAlg: "R S' R' U R S R'",
     setup: "F' U' F U R U R' U'",
     recognition:
       'Esquina ya resuelta en el slot DFR; arista en UF coincidiendo con el centro frontal.',
@@ -581,7 +555,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "R U' R' U R U' R'",
     altAlgs: ["F' U' F U2 R U' R'", "y' f R' f' U f R' f'"],
-    altAlg: "F' U' F U2 R U' R'",
     setup: "R U R' U' R U R'",
     recognition:
       'Esquina en DFR con blanco al frente; arista en UF alineada con su centro frontal.',
@@ -602,7 +575,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "R U R' U' F R' F' R",
     altAlgs: ["y L' U L U' L' U L", "F' U F U' F' U F"],
-    altAlg: "y L' U L U' L' U L",
     setup: "R' F R F' U R U' R'",
     recognition:
       'Esquina en DFR con blanco a la derecha; arista en UR alineada con el centro R.',
@@ -623,7 +595,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "R' F R F' U R U' R'",
     altAlgs: ["y L' U' L U L' U' L", "y' R' U' R U R' U' R"],
-    altAlg: "y L' U' L U L' U' L",
     setup: "F R' F' R F R' F' R",
     recognition:
       'Esquina en DFR con blanco al frente; arista en UR coincidiendo con el centro derecho.',
@@ -644,7 +615,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "R U R' U' R U R'",
     altAlgs: ["U' R U2 R' U2 R U R'", "U' F R' F' R2 U R'"],
-    altAlg: "U' R U2 R' U2 R U R'",
     setup: "R U' R' U R U' R'",
     recognition:
       'Esquina en DFR con blanco a la derecha; arista en UF coincidiendo con el centro frontal.',
@@ -665,7 +635,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "U' R' F R F' R U' R'",
     altAlgs: ["R U' R' U y' R' U R", "F' U F R U2 R'"],
-    altAlg: "R U' R' U y' R' U R",
     setup: "R U R' F R' F' R U",
     recognition:
       'Arista invertida en el slot FR y esquina encima en UFR con el sticker blanco arriba.',
@@ -686,7 +655,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: true,
     alg: "U R U' R' U R U' R' U R U' R'",
     altAlgs: ["R U R' U' R U R' U' R U R'", "R2 U R2 U R2 U2 R2"],
-    altAlg: "R U R' U' R U R' U' R U R'",
     setup: "R U' R' U R U' R' U R U' R'",
     recognition:
       'Arista bien orientada en FR y esquina en UFR con el sticker blanco mirando ARRIBA.',
@@ -707,7 +675,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "U' R U' R' U2 R U' R'",
     altAlgs: ["y R' D R U' R' D' R", "R U R' U' R U' R' U R U' R'"],
-    altAlg: "y R' D R U' R' D' R",
     setup: "R U R' U2' R U R' U",
     recognition:
       'Arista bien orientada en FR y esquina en UFR con el blanco mirando al FRENTE.',
@@ -728,7 +695,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "U R U R' U2 R U R'",
     altAlgs: ["U' R U2 R' U R U R'", "U R' D' R U' R' D R"],
-    altAlg: "U' R U2 R' U R U R'",
     setup: "R U' R' U2' R U' R' U'",
     recognition:
       'Arista bien orientada en FR y esquina en UFR con el blanco mirando a la DERECHA.',
@@ -749,7 +715,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "U' R U R' U F' U' F",
     altAlgs: ["U' R U R' d R' U' R", "U2 R U R' F R' F' R"],
-    altAlg: "U' R U R' d R' U' R",
     setup: "F' U F U' R U' R' U",
     recognition:
       'Arista invertida en FR y esquina en UFR con blanco mirando a la DERECHA.',
@@ -770,7 +735,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "U F' U' F U' R U R'",
     altAlgs: ["U2 R' F R F' U2 R U R'", "R U R' U R U R' U' F' U' F"],
-    altAlg: "U2 R' F R F' U2 R U R'",
     setup: "R U' R' U2' F R' F' R U2'",
     recognition:
       'Arista invertida en FR y esquina en UFR con blanco mirando al FRENTE.',
@@ -794,7 +758,6 @@ export const F2L_CASES: CfopCase[] = [
       "R' F R F' R U' R' U R U' R' U2 R U' R'",
       "R U2 R' U R U2 R' U F' U' F",
     ],
-    altAlg: "R' F R F' R U' R' U R U' R' U2 R U' R'",
     setup: "R U' R U2' F R2' F' U2' R2'",
     recognition:
       'La esquina ya está bien orientada en DFR, pero la arista en FR encima de ella está volteada.',
@@ -815,7 +778,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: true,
     alg: "R U' R' U' R U R' U2 R U' R'",
     altAlgs: ["R U R' U' R U2 R' U' R U R'", "R2 U2 R' U' R U' R' U2 R'"],
-    altAlg: "R U R' U' R U2 R' U' R U R'",
     setup: "R U' R' U R U2' R' U R U' R'",
     recognition:
       'Arista bien orientada en FR y esquina debajo torcida con el blanco mirando a la DERECHA.',
@@ -836,7 +798,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "R U' R' U R U2 R' U R U' R'",
     altAlgs: ["R U2 R U R' U R U2 R2", "R U R' U2 R U' R' U R U R'"],
-    altAlg: "R U2 R U R' U R U2 R2",
     setup: "R U' R' U' R U R' U2' R U' R'",
     recognition:
       'Arista bien orientada en FR y esquina debajo torcida con el blanco mirando al FRENTE.',
@@ -857,7 +818,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "r U' r' U2 r U r' R U R'",
     altAlgs: ["F' L' U2 L F R U R'", "R U' R' F R U R' U' F' R U' R'"],
-    altAlg: "F' L' U2 L F R U R'",
     setup: "R U R' F U R U' R' F' R U R'",
     recognition:
       'Arista invertida en FR y esquina debajo torcida con el blanco mirando a la DERECHA.',
@@ -878,7 +838,6 @@ export const F2L_CASES: CfopCase[] = [
     twoLook: false,
     alg: "R U' R' r U' r' U2 r U r'",
     altAlgs: ["R U' R' F' L' U2 L F", "R U R' U' y M U' R' F R U M'"],
-    altAlg: "R U' R' F' L' U2 L F",
     setup: "R F U R U' R' F' U' R'",
     recognition:
       'Arista invertida en FR y esquina debajo torcida con el blanco mirando al FRENTE.',

@@ -46,7 +46,6 @@ export const OLL_CASES: CfopCase[] = [
       "y R U' R2 D' r U' r' D R2 U R'",
       "f R U R' U' R f' U' r' U' R U M'",
     ],
-    altAlg: "y R U' R2 D' r U' r' D R2 U R'",
     setup: "F R' F' R U2' F R' F' R2' U2' R'",
     recognition:
       'Solo el centro amarillo arriba; dos barras laterales 1×3 completas en izquierda y derecha.',
@@ -71,7 +70,6 @@ export const OLL_CASES: CfopCase[] = [
       "F R U R' U' F' f R U R' U' f'",
       "y r U r' U2 R U2 R' U2 r U' r'",
     ],
-    altAlg: "F R U R' U' S R U R' U' f'",
     setup: "f U R U' R' f' F U R U' R' F'",
     recognition:
       'Solo el centro amarillo arriba; barra 1×3 a la izquierda y dos faros laterales.',
@@ -95,7 +93,6 @@ export const OLL_CASES: CfopCase[] = [
       "y R' F2 R2 U2 R' F R U2 R2 F2 R",
       "r' R2 U R' U r U2 r' U M'",
     ],
-    altAlg: "y R' F2 R2 U2 R' F R U2 R2 F2 R",
     setup: "F U R U' R' F' U f U R U' R' f' y",
     recognition:
       'Punto central con una sola esquina amarilla orientada (bloque diagonal de 2 piezas).',
@@ -119,7 +116,6 @@ export const OLL_CASES: CfopCase[] = [
       "y' f R U R' U' f' U F R U R' U' F'",
       "R' F R F' U' S R' U' R U R S'",
     ],
-    altAlg: "y' f R U R' U' f' U F R U R' U' F'",
     setup: "F U R U' R' F' U' f U R U' R' f' y",
     recognition:
       'Espejo de OLL 03: punto central con 1 esquina orientada.',
@@ -143,7 +139,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 l' U2 L U L' U l",
       "y2 R' F2 r U r' F R",
     ],
-    altAlg: "y2 l' U2 L U L' U l",
     setup: "r' U' R U' R' U2' r",
     recognition:
       'Cuadrado amarillo 2×2 en la esquina trasera-izquierda (UBL).',
@@ -167,7 +162,6 @@ export const OLL_CASES: CfopCase[] = [
       "F U' R2 D R' U' R D' R2 U F'",
       "y2 l U2 L' U' L U' l'",
     ],
-    altAlg: "F U' R2 D R' U' R D' R2 U F'",
     setup: "r U R' U R U2' r'",
     recognition:
       'Cuadrado amarillo 2×2 en la esquina frontal-izquierda (ULF).',
@@ -191,7 +185,6 @@ export const OLL_CASES: CfopCase[] = [
       "S' R U R' U R U2 R' U S",
       "L' U2 L U2 L F' L' F",
     ],
-    altAlg: "S' R U R' U R U2 R' U S",
     setup: "r U2' R' U' R U' r'",
     recognition:
       'Rayo pequeño con esquina orientada adelante-izquierda (ULF) y barra lateral a la derecha.',
@@ -215,7 +208,6 @@ export const OLL_CASES: CfopCase[] = [
       "l' U' L U' L' U2 l",
       "R U2 R' U2 R' F R F'",
     ],
-    altAlg: "l' U' L U' L' U2 l",
     setup: "r' U2' R U R' U r y2'",
     recognition:
       'Rayo pequeño espejo de OLL 07 con esquina orientada adelante-derecha (UFR).',
@@ -239,7 +231,6 @@ export const OLL_CASES: CfopCase[] = [
       "R U2 R' U' S' R U' R' S",
       "y' L' U' L U' L F' L' F L' U2 L",
     ],
-    altAlg: "R U2 R' U' S' R U' R' S",
     setup: "F U R U' R2' F' R U R U' R' y'",
     recognition:
       'Forma de pez/cometa con 1 esquina orientada y dos aristas adyacentes.',
@@ -263,7 +254,6 @@ export const OLL_CASES: CfopCase[] = [
       "y F U F' R' F R U' R' F' R",
       "y M' R' U2 R U R' U R U M",
     ],
-    altAlg: "y F U F' R' F R U' R' F' R",
     setup: "R U2' R' F R' F' R U' R U' R'",
     recognition:
       'Forma de pez espejo de OLL 09 con la esquina aislada atrás-derecha (UBR).',
@@ -287,7 +277,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 r U R' U R' F R F' R U2 r'",
       "M R U R' U R U2 R' U M'",
     ],
-    altAlg: "y2 r U R' U R' F R F' R U2 r'",
     setup: "M U' R U2' R' U' R U' R2' r",
     recognition:
       'Rayo pequeño con esquina orientada adelante-izquierda y barra 2×1 trasera.',
@@ -311,7 +300,6 @@ export const OLL_CASES: CfopCase[] = [
       "F R U R' U' F' U F R U R' U' F'",
       "y' S R' U' R U' R' U2 R U2 S'",
     ],
-    altAlg: "F R U R' U' F' U F R U R' U' F'",
     setup: "F U R U' R' F' U' F U R U' R' F'",
     recognition:
       'Rayo pequeño espejo de OLL 11.',
@@ -335,7 +323,6 @@ export const OLL_CASES: CfopCase[] = [
       "F U R U' R2 F' R U R U' R'",
       "r U' r' U' r U r' F' U F",
     ],
-    altAlg: "F U R U' R2 F' R U R U' R'",
     setup: "F' U' F r U' r' U r U r'",
     recognition:
       'Línea horizontal 1×3 con 1 esquina conectada adelante-izquierda (ULF) y faros al frente.',
@@ -359,7 +346,6 @@ export const OLL_CASES: CfopCase[] = [
       "r U R' U' r' F R2 U R' U' F'",
       "l' U l U l' U' l F U' F'",
     ],
-    altAlg: "r U R' U' r' F R2 U R' U' F'",
     setup: "F U F' R' F R U' R' F' R",
     recognition:
       'Línea horizontal 1×3 con 1 esquina conectada adelante-derecha (UFR) y faros al frente.',
@@ -383,7 +369,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 l' U' l L' U' L U l' U l",
       "r' U' M' U' R U r' U r",
     ],
-    altAlg: "y2 l' U' l L' U' L U l' U l",
     setup: "r' U' r U' R' U R r' U r",
     recognition:
       'Forma de caballo (L de 4 piezas) con esquina orientada atrás-derecha (UBR) y barra lateral a la derecha.',
@@ -407,7 +392,6 @@ export const OLL_CASES: CfopCase[] = [
       "r U M U R' U' r U' r'",
       "y2 R' F R U R' U' F' R U' R' U2 R",
     ],
-    altAlg: "r U M U R' U' r U' r'",
     setup: "r U r' U R U' R' r U' r'",
     recognition:
       'Forma de caballo espejo de OLL 15 con esquina orientada atrás-izquierda (UBL).',
@@ -431,7 +415,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 F R' F' R U S' R U' R' S",
       "y2 F R' F' R2 r' U R U' R' U' M'",
     ],
-    altAlg: "y2 F R' F' R U S' R U' R' S",
     setup: "F R' F' R U2' F R' F' R U' R U' R'",
     recognition:
       'Diagonal amarilla de 3 piezas (ULF, centro, UBR) sin ninguna arista orientada.',
@@ -455,7 +438,6 @@ export const OLL_CASES: CfopCase[] = [
       "r U R' U R U2 r2 U' R U' R' U2 r",
       "y F S' R U' R' S R U2 R' U' F'",
     ],
-    altAlg: "r U R' U R U2 r2 U' R U' R' U2 r",
     setup: "r' U2' R U R' U r2' U2' R' U' R U' r'",
     recognition:
       'Punto central con las 2 esquinas de un lado orientadas y faros en las dos esquinas restantes.',
@@ -479,7 +461,6 @@ export const OLL_CASES: CfopCase[] = [
       "M U R U R' U' M' R' F R F'",
       "R' U2 F R U R' U' F2 U2 F R",
     ],
-    altAlg: "M U R U R' U' M' R' F R F'",
     setup: "F R' F' R M U R U' R' U' M'",
     recognition:
       'Punto central con 2 esquinas adyacentes orientadas y las otras 2 mirando hacia lados opuestos.',
@@ -503,7 +484,6 @@ export const OLL_CASES: CfopCase[] = [
       "M' U2 M U2 M' U M U2 M' U2 M",
       "S' R U R' S U' M' U R U' r'",
     ],
-    altAlg: "M' U2 M U2 M' U M U2 M' U2 M",
     setup: "r U R' U' M2' U R U' R' U' M'",
     recognition:
       'X amarilla completa (las 4 esquinas orientadas y las 4 aristas volteadas).',
@@ -527,7 +507,6 @@ export const OLL_CASES: CfopCase[] = [
       "y R U2 R' U' R U R' U' R U' R'",
       "y F R U R' U' R U R' U' R U R' U' F'",
     ],
-    altAlg: "y R U2 R' U' R U R' U' R U' R'",
     setup: "R U R' U R U' R' U R U2' R' y'",
     recognition:
       'Cruz amarilla completa con dos pares de faros opuestos.',
@@ -551,7 +530,6 @@ export const OLL_CASES: CfopCase[] = [
       "R' U2 R2 U R2 U R2 U2 R'",
       "f R U R' U' S' R U R' U' F'",
     ],
-    altAlg: "R' U2 R2 U R2 U R2 U2 R'",
     setup: "R' U2' R2' U R2' U R2' U2' R'",
     recognition:
       'Cruz amarilla completa; un par de faros a la izquierda (L) y dos stickers opuestos a la derecha (R).',
@@ -575,7 +553,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 R2 D' R U2 R' D R U2 R",
       "R U R' U R U2 R2 U' R U' R' U2 R",
     ],
-    altAlg: "y2 R2 D' R U2 R' D R U2 R",
     setup: "R U2' R D R' U2' R D' R2'",
     recognition:
       'Cruz amarilla + barra trasera 1×3; dos faros apuntando directamente hacia el FRENTE.',
@@ -599,7 +576,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 R' F' r U R U' r' F",
       "y R U R D R' U' R D' R2",
     ],
-    altAlg: "y2 R' F' r U R U' r' F",
     setup: "F R' F' r U R U' r'",
     recognition:
       'Cruz amarilla con las 2 esquinas derechas orientadas y las 2 izquierdas apuntando a F y B.',
@@ -623,7 +599,6 @@ export const OLL_CASES: CfopCase[] = [
       "y F' r U R' U' r' F R",
       "F R' F' r U R U' r'",
     ],
-    altAlg: "y F' r U R' U' r' F R",
     setup: "R' F' r U R U' r' F y'",
     recognition:
       'Cruz amarilla con 2 esquinas opuestas diagonalmente orientadas (corbatín).',
@@ -647,7 +622,6 @@ export const OLL_CASES: CfopCase[] = [
       "R' U' R U' R' U2 R",
       "y2 L' U' L U' L' U2 L",
     ],
-    altAlg: "R' U' R U' R' U2 R",
     setup: "R U R' U R U2' R' y'",
     recognition:
       'Cruz amarilla con 1 esquina orientada; los 3 stickers laterales giran en sentido antihorario.',
@@ -671,7 +645,6 @@ export const OLL_CASES: CfopCase[] = [
       "y' R' U2 R U R' U R",
       "y L' U2 L U L' U L",
     ],
-    altAlg: "y' R' U2 R U R' U R",
     setup: "R U2' R' U' R U' R'",
     recognition:
       'Cruz amarilla con 1 esquina orientada en ULF y sticker amarillo frontal-derecho mirándote.',
@@ -695,7 +668,6 @@ export const OLL_CASES: CfopCase[] = [
       "r U R' U' r' R U R U' R'",
       "R' F R S R' F' R S'",
     ],
-    altAlg: "r U R' U' r' R U R U' R'",
     setup: "R U R' U' M' U R U' r'",
     recognition:
       'Las 4 esquinas y 2 aristas adyacentes ya están orientadas; solo faltan las aristas UF y UR.',
@@ -719,7 +691,6 @@ export const OLL_CASES: CfopCase[] = [
       "y R U R' U' R U' R' F' U' F R U R'",
       "y S' R U R' U' R' F R F' U S",
     ],
-    altAlg: "y R U R' U' R U' R' F' U' F R U R'",
     setup: "M F R' F' R U R U' R' U' M'",
     recognition:
       'T asimétrica con esquina conectada y faros atrás.',
@@ -743,7 +714,6 @@ export const OLL_CASES: CfopCase[] = [
       "y' r' D' r U' r' D r2 U' r' U r U r'",
       "y2 F R' F R2 U' R' U' R U R' F2",
     ],
-    altAlg: "y' r' D' r U' r' D r2 U' r' U r U r'",
     setup: "F U R U2' R' U R U2' R' U' F' y2'",
     recognition:
       'Espejo de OLL 29 con faros laterales.',
@@ -767,7 +737,6 @@ export const OLL_CASES: CfopCase[] = [
       "y S R U R' U' f' U' F",
       "y2 S' L' U' L U L F' L' f",
     ],
-    altAlg: "y S R U R' U' f' U' F",
     setup: "R' F R U R' U' F' U R",
     recognition:
       'Forma de P con bloque 2×2 atrás-derecha y sticker frontal-izquierdo mirando al frente.',
@@ -791,7 +760,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 L U F' U' L' U L F L'",
       "R U B' U' R' U R B R'",
     ],
-    altAlg: "y2 L U F' U' L' U L F L'",
     setup: "f R' F' R U R U' R' S'",
     recognition:
       'Forma de P con bloque 2×2 atrás-izquierda y sticker frontal-derecho mirando al frente.',
@@ -815,7 +783,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 L' U' L U L F' L' F",
       "y2 r' F' r U r U' r' F",
     ],
-    altAlg: "y2 L' U' L U L F' L' F",
     setup: "F R' F' R U R U' R'",
     recognition:
       'Forma de T acostada con barra vertical a la derecha y faros adelante/atrás a la izquierda.',
@@ -839,7 +806,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 R U R2 U' R' F R U R U' F'",
       "F R U R' U' R' F' r U R U' r'",
     ],
-    altAlg: "y2 R U R2 U' R' F R U R U' F'",
     setup: "F U R' U' R' F' R U R2' U' R' y2'",
     recognition:
       'Forma de C amarilla con faros en el lado abierto.',
@@ -863,7 +829,6 @@ export const OLL_CASES: CfopCase[] = [
       "f R U R' U' f' R U R' U R U2 R'",
       "R U2 R' d' R' F R U' R' F' R",
     ],
-    altAlg: "f R U R' U' f' R U R' U R U2 R'",
     setup: "R U2' R' F R' F' R2' U2' R'",
     recognition:
       'Bloque 2×2 atrás-derecha con esquina diagonal adelante-izquierda orientada (sin faros).',
@@ -887,7 +852,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 L' U' L U' L' U L U L F' L' F",
       "y2 R U R' F' R U R' U' R' F R U' R' F R F'",
     ],
-    altAlg: "y2 L' U' L U' L' U L U L F' L' F",
     setup: "F' L F L' U' L' U' L U L' U L y2'",
     recognition:
       'Escalera en forma de W con bloque diagonal izquierdo.',
@@ -911,7 +875,6 @@ export const OLL_CASES: CfopCase[] = [
       "F R U' R' U' R U R' F'",
       "y F' r U r' U' r' F r",
     ],
-    altAlg: "F R U' R' U' R U R' F'",
     setup: "F R U' R' U R U R' F'",
     recognition:
       'Bloque 2×2 adelante-izquierda con esquina trasera-derecha orientada.',
@@ -935,7 +898,6 @@ export const OLL_CASES: CfopCase[] = [
       "y F R U' R' S U' R U R' f'",
       "r U R' U' r' F R U R U' R' F'",
     ],
-    altAlg: "y F R U' R' S U' R U R' f'",
     setup: "F R' F' R U R U R' U' R U' R'",
     recognition:
       'Escalera en forma de W apuntando arriba-izquierda.',
@@ -959,7 +921,6 @@ export const OLL_CASES: CfopCase[] = [
       "y' R U R' F' U' F U R U2 R'",
       "y L F' L' U' L U F U' L'",
     ],
-    altAlg: "y' R U R' F' U' F U R U2 R'",
     setup: "L U F' U' L' U L F L' y'",
     recognition:
       'Rayo grande: línea de 3 con una punta a cada lado en diagonal.',
@@ -983,7 +944,6 @@ export const OLL_CASES: CfopCase[] = [
       "y' f R' F' R U R U' R' S'",
       "R r D r' U r D' r' U' R'",
     ],
-    altAlg: "y' f R' F' R U R U' R' S'",
     setup: "R' U' F U R U' R' F' R y'",
     recognition:
       'Rayo grande espejo de OLL 39.',
@@ -1007,7 +967,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 F U R2 D R' U' R D' R2 F'",
       "y' S U' R' F' U' F U R S'",
     ],
-    altAlg: "y2 F U R2 D R' U' R D' R2 F'",
     setup: "F U R U' R' F' R U2' R' U' R U' R' y2'",
     recognition:
       'Forma awkward con faros mirando al frente antes de y2 (atrás tras y2).',
@@ -1031,7 +990,6 @@ export const OLL_CASES: CfopCase[] = [
       "y F S' R U R' U' F' U S",
       "y R' F R F' R' F R F' R U R' U' R U R'",
     ],
-    altAlg: "y F S' R U R' U' F' U S",
     setup: "F U R U' R' F' R' U2' R U R' U R",
     recognition:
       'Forma awkward espejo de OLL 41 con faros mirando hacia el frente.',
@@ -1055,7 +1013,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 F' U' L' U L F",
       "f' L' U' L U f",
     ],
-    altAlg: "y2 F' U' L' U L F",
     setup: "f' U' L' U L f",
     recognition:
       'Forma de P con bloque 2×2 y una barra lateral 1×3 completa.',
@@ -1079,7 +1036,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 F U R U' R' F'",
       "y R U B U' B' R'",
     ],
-    altAlg: "y2 F U R U' R' F'",
     setup: "f U R U' R' f'",
     recognition:
       'Forma de P con barra 1×3 a la derecha (o L pequeña en 2-Look OLL).',
@@ -1103,7 +1059,6 @@ export const OLL_CASES: CfopCase[] = [
       "y R' F' U' F U R",
       "y2 f U R U' R' f'",
     ],
-    altAlg: "y R' F' U' F U R",
     setup: "F U R U' R' F'",
     recognition:
       'Forma de T con barra lateral 1×3 a la izquierda (o línea horizontal en 2-Look OLL).',
@@ -1127,7 +1082,6 @@ export const OLL_CASES: CfopCase[] = [
       "R' F' U' F R U' R' U2 R",
       "y F R U R' U' F' U' R U R' U R U2 R'",
     ],
-    altAlg: "R' F' U' F R U' R' U2 R",
     setup: "R' U' F R' F' R U R",
     recognition:
       'Forma de C a la izquierda acompañada de una barra lateral 1×3 amarilla a la derecha.',
@@ -1151,7 +1105,6 @@ export const OLL_CASES: CfopCase[] = [
       "F' L' U' L U L' U' L U F",
       "R' U' R' F R F' R' F R F' U R",
     ],
-    altAlg: "F' L' U' L U L' U' L U F",
     setup: "F' U' L' U L U' L' U L F",
     recognition:
       'L pequeña arriba sin esquinas orientadas; faros a la derecha.',
@@ -1175,7 +1128,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 f U R U' R' U R U' R' f'",
       "F l F l' U' l F l' U' F'",
     ],
-    altAlg: "y2 f U R U' R' U R U' R' f'",
     setup: "F U R U' R' U R U' R' F'",
     recognition:
       'L pequeña atrás-izquierda con faros a la izquierda (L) y stickers opuestos al frente.',
@@ -1199,7 +1151,6 @@ export const OLL_CASES: CfopCase[] = [
       "l U' l2 U l2 U l2 U' l",
       "R B' R2 F R2 B R2 F' R",
     ],
-    altAlg: "l U' l2 U l2 U l2 U' l",
     setup: "r' U r2' U' r2' U' r2' U r' y2'",
     recognition:
       'L pequeña arriba con barra 1×3 trasera y faros a la izquierda (antes de y2).',
@@ -1223,7 +1174,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 R' F R2 B' R2 F' R2 B R'",
       "y' R U2 R' U' R U' R' F R U R' U' F'",
     ],
-    altAlg: "y2 R' F R2 B' R2 F' R2 B R'",
     setup: "r U' r2' U r2' U r2' U' r",
     recognition:
       'L pequeña arriba con barra 1×3 atrás (B) y faros a la derecha (R).',
@@ -1247,7 +1197,6 @@ export const OLL_CASES: CfopCase[] = [
       "f R U R' U' R U R' U' f'",
       "y' R' U' R' F R F' R U' R' U2 R",
     ],
-    altAlg: "f R U R' U' R U R' U' f'",
     setup: "f U R U' R' U R U' R' f'",
     recognition:
       'Línea horizontal 1×3 arriba con faros a un lado y opuestos en el otro.',
@@ -1271,7 +1220,6 @@ export const OLL_CASES: CfopCase[] = [
       "R U R' U R U' B U' B' R'",
       "R U R' U R d' R U' R' F'",
     ],
-    altAlg: "R U R' U R U' B U' B' R'",
     setup: "F R U R' d R' U' R U' R'",
     recognition:
       'Línea vertical 1×3 arriba con una barra lateral 1×3 a un lado y faros al otro.',
@@ -1295,7 +1243,6 @@ export const OLL_CASES: CfopCase[] = [
       "y2 l' U' L U' L' U L U' L' U2 l",
       "y r' U2 R U R' U' R U R' U r",
     ],
-    altAlg: "y2 l' U' L U' L' U L U' L' U2 l",
     setup: "r' U2' R U R' U' R U R' U r",
     recognition:
       'L pequeña atrás-derecha con una barra lateral 1×3 a la izquierda.',
@@ -1319,7 +1266,6 @@ export const OLL_CASES: CfopCase[] = [
       "y' r U2 R' U' R U R' U' R U' r'",
       "y' r U r' R U R' U' R U R' U' r U' r'",
     ],
-    altAlg: "y' r U2 R' U' R U R' U' R U' r'",
     setup: "r U2' R' U' R U R' U' R U' r'",
     recognition:
       'L pequeña adelante-derecha con una barra lateral 1×3 a la izquierda.',
@@ -1343,7 +1289,6 @@ export const OLL_CASES: CfopCase[] = [
       "y R' F R U R U' R2 F' R2 U' R' U R U R'",
       "R U2 R2 U' R U' R' U2 F R F'",
     ],
-    altAlg: "y R' F R U R U' R2 F' R2 U' R' U R U R'",
     setup: "F R' F' U2' R U R' U R2' U2' R'",
     recognition:
       'Línea 1×3 arriba flanqueada por dos barras laterales 1×3 completas.',
@@ -1367,7 +1312,6 @@ export const OLL_CASES: CfopCase[] = [
       "r U r' U R U' R' M' U R U2 r'",
       "F R U R' U' R F' r U R' U' r'",
     ],
-    altAlg: "r U r' U R U' R' M' U R U2 r'",
     setup: "r U r' R U R' U' R U R' U' r U' r'",
     recognition:
       'Línea horizontal 1×3 arriba con faros a la izquierda y a la derecha.',
@@ -1391,7 +1335,6 @@ export const OLL_CASES: CfopCase[] = [
       "y R U' R' S' R U R' S",
       "y R U R' S' R U' R' S",
     ],
-    altAlg: "y R U' R' S' R U R' S",
     setup: "r U R' U' M U R U' R'",
     recognition:
       'Las 4 esquinas y 2 aristas opuestas están orientadas formando una H amarilla.',

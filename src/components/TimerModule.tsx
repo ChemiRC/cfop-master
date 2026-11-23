@@ -396,7 +396,7 @@ export const TimerModule: React.FC = () => {
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
-      className={`timer-surface h-timer-viewport relative flex w-full flex-col justify-between overflow-hidden px-4 py-5 transition-colors sm:px-8 sm:py-8 ${
+      className={`timer-surface h-timer-viewport relative flex w-full flex-1 flex-col justify-between overflow-hidden px-4 py-4 transition-colors sm:px-8 sm:py-8 ${
         isReady
           ? 'bg-[#10B981]/[0.03]'
           : isCountdown
@@ -443,7 +443,7 @@ export const TimerModule: React.FC = () => {
       </div>
 
       {/* Centro: Reloj gigante de precisión con tabular-nums */}
-      <div className="my-auto flex flex-col items-center justify-center py-6 text-center">
+      <div className="my-auto flex flex-col items-center justify-center py-3 text-center sm:py-6">
         <div
           translate="no"
           aria-live={isRunning ? 'off' : 'polite'}

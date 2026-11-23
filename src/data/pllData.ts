@@ -34,7 +34,6 @@ export const PLL_CASES: CfopCase[] = [
       "R U R' U R' U' R2 U' R' U R' U R",
       "y R2 U' S' U2 S U' R2",
     ],
-    altAlg: "R U R' U R' U' R2 U' R' U R' U R",
     setup: "M2' U' M' U2' M U' M2'",
     recognition:
       'Barra 1×3 resuelta al frente (o atrás tras y2) y faros en las otras 3 caras; las 3 aristas rotan en sentido antihorario.',
@@ -58,7 +57,6 @@ export const PLL_CASES: CfopCase[] = [
       "R' U R' U' R' U' R' U R U R2",
       "R2 U R U R' U' R' U' R' U R'",
     ],
-    altAlg: "R' U R' U' R' U' R' U R U R2",
     setup: "M2' U M' U2' M U M2'",
     recognition:
       'Barra 1×3 resuelta al frente (o atrás tras y2) y faros en las otras 3 caras; las 3 aristas rotan en sentido horario.',
@@ -82,7 +80,6 @@ export const PLL_CASES: CfopCase[] = [
       "M2 U' M2 U2 M2 U' M2",
       "R2 S2 R2 U' R2 S2 R2",
     ],
-    altAlg: "M2 U' M2 U2 M2 U' M2",
     setup: "M2' U' M2' U2' M2' U' M2'",
     recognition:
       'Faros en las 4 caras; cada arista central muestra el color opuesto al de sus esquinas.',
@@ -106,7 +103,6 @@ export const PLL_CASES: CfopCase[] = [
       "M2 U M2 U M' U2 M2 U2 M'",
       "y M2 U' M2 U' M' U2 M2 U2 M'",
     ],
-    altAlg: "M2 U M2 U M' U2 M2 U2 M'",
     setup: "M U2' M2' U2' M U' M2' U' M2'",
     recognition:
       'Faros en las 4 caras con patrón alterno de 2 colores adyacentes (frente ↔ derecha y atrás ↔ izquierda).',
@@ -134,7 +130,6 @@ export const PLL_CASES: CfopCase[] = [
       "l' U R' D2 R U' R' D2 R2 x'",
       "x' R2 D2 R' U' R D2 R' U R' x",
     ],
-    altAlg: "l' U R' D2 R U' R' D2 R2 x'",
     setup: "x R2' D2' R U R' D2' R U' R x'",
     recognition:
       'Bloque cuadrado 2×2 resuelto adelante-izquierda y faros mirando hacia ATRÁS (cara B).',
@@ -158,7 +153,6 @@ export const PLL_CASES: CfopCase[] = [
       "y x' R U' R D2 R' U R D2 R2 x",
       "l' R' D2 R U R' D2 R U' R x'",
     ],
-    altAlg: "y x' R U' R D2 R' U R D2 R2 x",
     setup: "x R' U R' D2' R U' R' D2' R2' x'",
     recognition:
       'Bloque cuadrado 2×2 resuelto atrás-izquierda y faros mirando hacia la DERECHA (cara R).',
@@ -182,7 +176,6 @@ export const PLL_CASES: CfopCase[] = [
       "y R' U' R' D' R U' R' D R U R' D' R U R' D R2",
       "R2 U F' R' U R U' R' U R U' R' U R U' F U' R2",
     ],
-    altAlg: "y R' U' R' D' R U' R' D R U R' D' R U R' D R2",
     setup: "x' D R U R' D' R U' R' D R U' R' D' R U R' x y'",
     recognition:
       'Cero faros y cero bloques 2×1 en las 4 caras; todas las aristas ya están resueltas entre sí.',
@@ -210,7 +203,6 @@ export const PLL_CASES: CfopCase[] = [
       "y R' F R f' R' F R2 U R' U' R' F' R2 U R' S",
       "R' U R U' R2 F' U' F U R F R' F' R2",
     ],
-    altAlg: "y R' F R f' R' F R2 U R' U' R' F' R2 U R' S",
     setup: "R' U' R U' R' U R U R2' F' R U R U' R' F U R y'",
     recognition:
       'Única barra 1×3 completamente resuelta y cero faros en las otras 3 caras.',
@@ -234,7 +226,6 @@ export const PLL_CASES: CfopCase[] = [
       "R2 u R' U R' U' R u' R2 F' U F",
       "y R U R' F' R U R' U' R' F R U' R' F R2 U' R' U' R U R' F'",
     ],
-    altAlg: "R2 u R' U R' U' R u' R2 F' U F",
     setup: "R' U' R D' U R2' U R' U R U' R U' R2' D",
     recognition:
       'Único par de faros a la IZQUIERDA (L) + bloque 2×1 en el FRENTE-DERECHA.',
@@ -258,7 +249,6 @@ export const PLL_CASES: CfopCase[] = [
       "R' U' R U D' R2 U R' U R U' R U' R2 D",
       "y F' U' F R2 u R' U R U' R u' R2",
     ],
-    altAlg: "R' U' R U D' R2 U R' U R U' R U' R2 D",
     setup: "R2' U R' U R' U' R U' R2' D U' R' U R D'",
     recognition:
       'Único par de faros a la IZQUIERDA (L) + bloque 2×1 en la cara DERECHA hacia atrás.',
@@ -282,7 +272,6 @@ export const PLL_CASES: CfopCase[] = [
       "y2 R2 F2 R U2 R U2 R' F R U R' U' R' F R2",
       "D R2 U' R U' R U R' U R2 D' U R U' R'",
     ],
-    altAlg: "y2 R2 F2 R U2 R U2 R' F R U R' U' R' F R2",
     setup: "D' R U R' U' D R2' U' R U' R' U R' U R2'",
     recognition:
       'Único par de faros a la IZQUIERDA (L) + bloque 2×1 en la cara TRASERA hacia la derecha.',
@@ -306,7 +295,6 @@ export const PLL_CASES: CfopCase[] = [
       "D' R U R' U' D R2 U' R U' R' U R' U R2",
       "R U R' y' R2 u' R U' R' U R' u R2",
     ],
-    altAlg: "D' R U R' U' D R2 U' R U' R' U R' U R2",
     setup: "R2' U' R U' R U R' U R2' D' U R U' R' D",
     recognition:
       'Único par de faros a la IZQUIERDA (L) + bloque 2×1 en la cara DERECHA hacia el frente.',
@@ -330,7 +318,6 @@ export const PLL_CASES: CfopCase[] = [
       "L' U' L F L' U' L U L F' L2 U L",
       "y R' U L' U2 R U' R' U2 R L",
     ],
-    altAlg: "L' U' L F L' U' L U L F' L2 U L",
     setup: "L' R' U2' R U R' U2' L U' R y'",
     recognition:
       'Barra 1×3 resuelta con bloques 2×1 adyacentes situados a la izquierda de cada cara.',
@@ -354,7 +341,6 @@ export const PLL_CASES: CfopCase[] = [
       "R U2 R' U' R U2 L' U R' U' L",
       "r' F R F' r U2 R' U R U2 R'",
     ],
-    altAlg: "R U2 R' U' R U2 L' U R' U' L",
     setup: "R U R2' F' R U R U' R' F R U' R'",
     recognition:
       'Barra 1×3 resuelta a la IZQUIERDA (L) con bloques 2×1 pegados hacia el frente y la derecha.',
@@ -378,7 +364,6 @@ export const PLL_CASES: CfopCase[] = [
       "y R U R' F' R U2 R' U2 R' F R U R U2 R'",
       "L U2 L' U2 L F' L' U' L U L F L2",
     ],
-    altAlg: "y R U R' F' R U2 R' U2 R' F R U R U2 R'",
     setup: "R U2' R D R' U R D' R' U' R' U R U R' y'",
     recognition:
       'Faros en una cara y un bloque 2×1 pegado inmediatamente a su derecha (adelante-izquierda tras y).',
@@ -402,7 +387,6 @@ export const PLL_CASES: CfopCase[] = [
       "y R2 F R U R U' R' F' R U2 R' U2 R",
       "R' U2 R' D' R U' R' D R U R U' R' U' R",
     ],
-    altAlg: "y R2 F R U R U' R' F' R U2 R' U2 R",
     setup: "R' U R U R' U' R' D' R U R' D R U2' R",
     recognition:
       'Faros mirando hacia ATRÁS (B) y bloque 2×1 en el lado derecho de la cara frontal.',
@@ -426,7 +410,6 @@ export const PLL_CASES: CfopCase[] = [
       "R U R' U' R' F R2 U' R' U F' L' U L",
       "F R U' R' U R U R2 F' R U R U' R'",
     ],
-    altAlg: "R U R' U' R' F R2 U' R' U F' L' U L",
     setup: "F R U' R' U R U R2' F' R U R U' R'",
     recognition:
       'Faros a la IZQUIERDA (L) flanqueados por dos bloques 2×1 en las caras F y B.',
@@ -454,7 +437,6 @@ export const PLL_CASES: CfopCase[] = [
       "F' R U R' U' R' F R2 F U' R' U' R U F' R'",
       "R F U' R' U R U F' R2 F' R U R U' R' F",
     ],
-    altAlg: "F' R U R' U' R' F R2 F U' R' U' R U F' R'",
     setup: "R U R' U2' R U R2' F' R U R U' R' F R U' R' U' R U' R'",
     recognition:
       'Simétrico en las 4 caras: bloque 2×1 a la DERECHA y esquina de color opuesto a la izquierda en cada cara.',
@@ -478,7 +460,6 @@ export const PLL_CASES: CfopCase[] = [
       "r' D' F r U' r' F' D r2 U r' U' r' F r F'",
       "R' U L' U2 R U' L R' U L' U2 R U' L",
     ],
-    altAlg: "r' D' F r U' r' F' D r2 U r' U' r' F r F'",
     setup: "F r' F' r U r U' r2' D' F r U r' F' D r",
     recognition:
       'Simétrico en las 4 caras: bloque 2×1 a la IZQUIERDA y esquina de color opuesto a la derecha en cada cara.',
@@ -502,7 +483,6 @@ export const PLL_CASES: CfopCase[] = [
       "R' U R U' R' f' U' R U2 R' U' R U' R' f R",
       "R' U R' U' y R' F' R2 U' R' U R' F R F",
     ],
-    altAlg: "R' U R U' R' f' U' R U2 R' U' R U' R' f R",
     setup: "D2' R' U R D' R2' U' R' U R' U R' D' R U2' R'",
     recognition:
       'Bloque cuadrado 2×2 completo adelante-izquierda y cero faros en las otras dos caras.',
@@ -526,7 +506,6 @@ export const PLL_CASES: CfopCase[] = [
       "F R' F R2 U' R' U' R U R' F' R U R' U' F'",
       "R2 U' R2 U' R2 U F U F' R2 F U' F'",
     ],
-    altAlg: "F R' F R2 U' R' U' R U R' F' R U R' U' F'",
     setup: "F R' F' R U R U' R' F R U' R' U R U R' F'",
     recognition:
       'Cero faros; dos bloques 2×1 convergen en la esquina frontal-izquierda (ULF) dejando la esquina UFR aislada.',

@@ -155,6 +155,7 @@ export function segmentAlgWithTriggers(alg: string): TriggerSegment[] {
 
 /**
  * Refleja un algoritmo Izquierda <-> Derecha (R <-> L, r <-> l, invierte sentido de U/D/F/B/y/z/S/E).
+ * M y x mantienen su sentido simple porque giran en el mismo plano sagital (YZ) perpendicular al espejo L<->R.
  */
 export function mirrorAlgLR(alg: string): string {
   const tokens = splitAlgMoves(alg);

@@ -623,7 +623,6 @@ export const CROSS_CASES: CfopCase[] = [
     subcategory: 'Aristas Invertidas',
     twoLook: true,
     alg: "U' R' F R",
-    altAlg: "F' R' D' R",
     altAlgs: ["F' R' D' R"],
     recognition: 'Arista en UF con el color de la cruz mirando hacia ti (desorientada para F2).',
     explanation:
@@ -642,7 +641,6 @@ export const CROSS_CASES: CfopCase[] = [
     subcategory: 'Aristas Invertidas',
     twoLook: false,
     alg: "F' D' R' D",
-    altAlg: "F R' D' R",
     altAlgs: ["F R' D' R"],
     recognition:
       'La arista ya está en su lugar de la base (DF) pero volteada al revés.',

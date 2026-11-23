@@ -837,7 +837,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
               <button
                 key={idx}
                 type="button"
-                title={algVariant}
+                title={isMirrored ? mirrorAlgLR(algVariant) : algVariant}
                 onClick={() => {
                   triggerHaptic('selection');
                   setSelectedAlgIndex(idx);

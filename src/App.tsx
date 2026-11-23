@@ -225,7 +225,10 @@ export const App: React.FC = () => {
     triggerHaptic('selection');
     setActiveTab(stage);
     setIsSheetOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({
+      top: 0,
+      behavior: stage === 'Timer' ? 'auto' : 'smooth',
+    });
     if (stage === 'Timer') return;
     if (stage === 'Notation') {
       setSelection(moveToSelection(NOTATION_MOVES[0], 0));
@@ -418,7 +421,7 @@ export const App: React.FC = () => {
 
           {/* Barra de navegación Desktop: contenedor definido + acentos claros + alto contraste */}
           <nav
-            aria-label="Etapas"
+            aria-label="Etapas principal"
             className="no-scrollbar hidden items-center gap-1 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900 p-1 lg:flex"
           >
             {NAV_ITEMS.map((item) => {
@@ -618,7 +621,7 @@ export const App: React.FC = () => {
                 triggerHaptic('light');
                 setIsSheetOpen(true);
               }}
-              className="flex h-13 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-zinc-800 bg-zinc-900/90 p-1.5 text-left active:bg-zinc-800"
+              className="flex h-14 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-zinc-800 bg-zinc-900/90 p-1.5 text-left active:bg-zinc-800"
             >
               <div className="[&>div]:h-10 [&>div]:w-10 [&>div]:p-0.5">
                 <Cube2DPreview
@@ -656,7 +659,7 @@ export const App: React.FC = () => {
               type="button"
               onClick={toggleLeftyMode}
               title={isLeftyMode ? 'Modo Zurdo activo' : 'Activar Modo Zurdo'}
-              className={`flex h-13 w-11 shrink-0 flex-col items-center justify-center rounded-xl border font-mono text-[10px] font-medium transition-colors ${
+              className={`flex h-14 w-11 shrink-0 flex-col items-center justify-center rounded-xl border font-mono text-[10px] font-medium transition-colors ${
                 isLeftyMode
                   ? 'border-[#3B82F6] bg-[#3B82F6]/15 text-[#3B82F6]'
                   : 'border-zinc-800 bg-zinc-900 text-zinc-300'
@@ -670,7 +673,7 @@ export const App: React.FC = () => {
 
         {/* Barra de navegación móvil: etiquetas completas, sin abreviaturas, scroll horizontal suave */}
         <nav
-          aria-label="Etapas"
+          aria-label="Etapas móvil"
           className="no-scrollbar flex items-center gap-1 overflow-x-auto scroll-smooth rounded-xl border border-zinc-800 bg-zinc-900 p-1"
         >
           {NAV_ITEMS.map((item) => {
