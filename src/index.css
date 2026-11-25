@@ -46,9 +46,9 @@
     padding-right: max(1rem, env(safe-area-inset-right));
   }
 
-  /* Reserva espacio para el dock inferior móvil (preview h-14 + nav h-11 + paddings) */
+  /* Reserva espacio para el dock inferior móvil (preview h-14 + nav h-12 + paddings) */
   .pb-dock {
-    padding-bottom: calc(9rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(9.5rem + env(safe-area-inset-bottom));
   }
   @media (min-width: 1024px) {
     .pb-dock {
@@ -56,10 +56,10 @@
     }
   }
 
-  /* Viewport exacto del Timer descontando header (3.5rem + 1px) y el pb inferior del dock móvil (4.5rem) */
+  /* Viewport exacto del Timer descontando header (3.5rem + 1px) y el pb inferior del dock móvil (4.75rem) */
   .h-timer-viewport {
     min-height: calc(
-      100dvh - 8rem - 1px - env(safe-area-inset-top) -
+      100dvh - 8.25rem - 1px - env(safe-area-inset-top) -
         env(safe-area-inset-bottom)
     );
   }

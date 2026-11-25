@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BookOpen, ChevronUp, Timer, X } from 'lucide-react';
+import { BookOpen, ChevronUp, Layers, Timer, X, Zap } from 'lucide-react';
 import {
   CFOP_CASES,
   CFOP_REDUCIDO_CASES,
@@ -15,7 +15,9 @@ import { TimerModule } from './components/TimerModule';
 import type {
   ActiveSelection,
   CfopCase,
-  CfopStage,
+  CfopSubStage,
+  LearningStage,
+  MainSection,
   NotationMove,
   TopFaceColor,
   VisualStage,
@@ -81,47 +83,66 @@ function moveToSelection(m: NotationMove, nonce: number): ActiveSelection {
   };
 }
 
-interface NavItemConfig {
-  id: CfopStage;
+interface MainNavConfig {
+  id: MainSection;
   label: string;
   count?: number;
-  accentBarClass?: string;
-  icon?: 'notation' | 'timer';
 }
 
-const NAV_ITEMS: NavItemConfig[] = [
-  { id: 'Notation', label: 'Notación', icon: 'notation' },
+const FULL_CFOP_COUNT = CFOP_CASES.length - CFOP_REDUCIDO_CASES.length;
+
+const MAIN_NAV_ITEMS: MainNavConfig[] = [
   {
     id: 'Reducido',
     label: 'Reducido',
     count: CFOP_REDUCIDO_CASES.length,
-    accentBarClass: 'bg-[#10B981]',
   },
+  {
+    id: 'CFOP',
+    label: 'CFOP',
+    count: FULL_CFOP_COUNT,
+  },
+  { id: 'Notation', label: 'Notación' },
+  { id: 'Timer', label: 'Timer' },
+];
+
+interface CfopSubStageConfig {
+  id: CfopSubStage;
+  label: string;
+  count: number;
+  dotClass: string;
+  activeDotClass: string;
+}
+
+const CFOP_SUB_STAGE_ITEMS: CfopSubStageConfig[] = [
   {
     id: 'Cross',
     label: 'Cross',
-    count: 6,
-    accentBarClass: 'bg-[#FAFAFA] ring-1 ring-zinc-500/80',
+    count: CFOP_CASES.filter((c) => c.stage === 'Cross').length,
+    dotClass: 'bg-[#FAFAFA] ring-1 ring-zinc-500/80',
+    activeDotClass: 'bg-zinc-900 ring-1 ring-zinc-400',
   },
   {
     id: 'F2L',
     label: 'F2L',
-    count: 41,
-    accentBarClass: 'bg-[#3B82F6]',
+    count: CFOP_CASES.filter((c) => c.stage === 'F2L').length,
+    dotClass: 'bg-[#3B82F6]',
+    activeDotClass: 'bg-[#3B82F6]',
   },
   {
     id: 'OLL',
     label: 'OLL',
-    count: 57,
-    accentBarClass: 'bg-[#EAB308]',
+    count: CFOP_CASES.filter((c) => c.stage === 'OLL').length,
+    dotClass: 'bg-[#EAB308]',
+    activeDotClass: 'bg-[#EAB308]',
   },
   {
     id: 'PLL',
     label: 'PLL',
-    count: 21,
-    accentBarClass: 'bg-[#EF4444]',
+    count: CFOP_CASES.filter((c) => c.stage === 'PLL').length,
+    dotClass: 'bg-[#EF4444]',
+    activeDotClass: 'bg-[#EF4444]',
   },
-  { id: 'Timer', label: 'Timer', icon: 'timer' },
 ];
 
 function isDesktop(): boolean {
@@ -131,14 +152,13 @@ function isDesktop(): boolean {
 }
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<CfopStage>('F2L');
+  const [activeSection, setActiveSection] = useState<MainSection>('CFOP');
+  const [activeCfopStage, setActiveCfopStage] = useState<CfopSubStage>('F2L');
   const [topFace, setTopFace] = useState<TopFaceColor>('yellow');
   const [isSheetOpen, setIsSheetOpen] = useState<boolean>(false);
   const [dragOffset, setDragOffset] = useState<number>(0);
   const dragStartY = useRef<number | null>(null);
-  const mobileNavRefs = useRef<Partial<Record<CfopStage, HTMLButtonElement | null>>>(
-    {}
-  );
+  const lastCfopCaseIdsRef = useRef<Partial<Record<CfopSubStage, string>>>({});
 
   // Modo Zurdo Global persistente
   const [isLeftyMode, setIsLeftyMode] = useState<boolean>(() => {
@@ -214,6 +234,9 @@ export const App: React.FC = () => {
   const [selection, setSelection] = useState<ActiveSelection>(() => {
     const initialCase =
       CFOP_CASES.find((c) => c.stage === 'F2L') ?? CFOP_CASES[0];
+    if (initialCase.stage !== 'Reducido') {
+      lastCfopCaseIdsRef.current[initialCase.stage] = initialCase.id;
+    }
     return caseToSelection(initialCase);
   });
 
@@ -221,34 +244,52 @@ export const App: React.FC = () => {
     if (!isDesktop()) setIsSheetOpen(true);
   }, []);
 
-  const handleTabChange = useCallback((stage: CfopStage) => {
+  const handleMainSectionChange = useCallback(
+    (section: MainSection) => {
+      triggerHaptic('selection');
+      setActiveSection(section);
+      setIsSheetOpen(false);
+      window.scrollTo({
+        top: 0,
+        behavior: section === 'Timer' ? 'auto' : 'smooth',
+      });
+
+      if (section === 'Timer') return;
+      if (section === 'Notation') {
+        setSelection(moveToSelection(NOTATION_MOVES[0], 0));
+        return;
+      }
+      if (section === 'Reducido') {
+        const firstReducido = CFOP_CASES.find((c) => c.stage === 'Reducido');
+        if (firstReducido) setSelection(caseToSelection(firstReducido));
+        return;
+      }
+
+      // Al volver a CFOP, restaurar el último caso de la etapa recordada (o el primero)
+      const rememberedId = lastCfopCaseIdsRef.current[activeCfopStage];
+      const targetCase =
+        (rememberedId &&
+          CFOP_CASES.find(
+            (c) => c.stage === activeCfopStage && c.id === rememberedId
+          )) ||
+        CFOP_CASES.find((c) => c.stage === activeCfopStage);
+      if (targetCase) {
+        setSelection(caseToSelection(targetCase));
+      }
+    },
+    [activeCfopStage]
+  );
+
+  const handleCfopStageChange = useCallback((stage: CfopSubStage) => {
     triggerHaptic('selection');
-    setActiveTab(stage);
+    setActiveCfopStage(stage);
     setIsSheetOpen(false);
-    window.scrollTo({
-      top: 0,
-      behavior: stage === 'Timer' ? 'auto' : 'smooth',
-    });
-    if (stage === 'Timer') return;
-    if (stage === 'Notation') {
-      setSelection(moveToSelection(NOTATION_MOVES[0], 0));
-    } else {
-      const firstStageCase = CFOP_CASES.find((c) => c.stage === stage);
-      if (firstStageCase) setSelection(caseToSelection(firstStageCase));
+    const firstStageCase = CFOP_CASES.find((c) => c.stage === stage);
+    if (firstStageCase) {
+      lastCfopCaseIdsRef.current[stage] = firstStageCase.id;
+      setSelection(caseToSelection(firstStageCase));
     }
   }, []);
-
-  // Centra suavemente la pestaña activa en la barra móvil con scroll horizontal
-  useEffect(() => {
-    const btn = mobileNavRefs.current[activeTab];
-    if (btn) {
-      btn.scrollIntoView({
-        behavior: 'smooth',
-        inline: 'center',
-        block: 'nearest',
-      });
-    }
-  }, [activeTab]);
 
   const handleSelectMove = useCallback(
     (move: NotationMove) => {
@@ -287,6 +328,9 @@ export const App: React.FC = () => {
   const handleSelectCase = useCallback(
     (cfopCase: CfopCase) => {
       triggerHaptic('light');
+      if (cfopCase.stage !== 'Reducido') {
+        lastCfopCaseIdsRef.current[cfopCase.stage] = cfopCase.id;
+      }
       setSelection(caseToSelection(cfopCase));
       openSheetOnMobile();
     },
@@ -332,11 +376,13 @@ export const App: React.FC = () => {
     setDragOffset(0);
   };
 
-  const isTimerTab = activeTab === 'Timer';
+  const isTimerTab = activeSection === 'Timer';
+  const activeCatalogStage: LearningStage =
+    activeSection === 'Reducido' ? 'Reducido' : activeCfopStage;
 
   const headerMetric = useMemo(() => {
-    if (activeTab === 'Timer') return 'WCA 3×3';
-    if (activeTab === 'Notation') {
+    if (activeSection === 'Timer') return 'WCA 3×3';
+    if (activeSection === 'Notation') {
       const ids = [
         ...NOTATION_MOVES.map((m) => m.id),
         ...FUNDAMENTAL_TRIGGERS.map((t) => t.id),
@@ -344,12 +390,12 @@ export const App: React.FC = () => {
       const idx = Math.max(0, ids.indexOf(selection.id)) + 1;
       return `${idx}/${ids.length}`;
     }
-    const stageCases = CFOP_CASES.filter((c) => c.stage === activeTab);
+    const stageCases = CFOP_CASES.filter((c) => c.stage === activeCatalogStage);
     const idx =
       Math.max(0, stageCases.findIndex((c) => c.id === selection.id)) + 1;
-    const label = activeTab === 'Reducido' ? 'RED' : activeTab;
+    const label = activeCatalogStage === 'Reducido' ? 'RED' : activeCatalogStage;
     return `${idx}/${stageCases.length} ${label}`;
-  }, [activeTab, selection.id]);
+  }, [activeCatalogStage, activeSection, selection.id]);
 
   const dockPreviewStage: VisualStage =
     selection.visualStage ??
@@ -364,34 +410,45 @@ export const App: React.FC = () => {
 
   const isSelectionReducido = selection.stage === 'Reducido';
 
-  const renderNavIndicator = (item: NavItemConfig, isActive: boolean) => {
-    if (item.icon === 'timer') {
-      return (
-        <Timer
-          className={`h-3.5 w-3.5 shrink-0 ${
-            isActive ? 'text-[#09090B]' : 'text-sky-400'
-          }`}
-        />
-      );
+  const renderMainNavIcon = (
+    id: MainSection,
+    isActive: boolean,
+    sizeClass = 'h-3.5 w-3.5'
+  ) => {
+    switch (id) {
+      case 'Reducido':
+        return (
+          <Zap
+            className={`${sizeClass} shrink-0 ${
+              isActive ? 'text-[#09090B]' : 'text-[#10B981]'
+            }`}
+          />
+        );
+      case 'CFOP':
+        return (
+          <Layers
+            className={`${sizeClass} shrink-0 ${
+              isActive ? 'text-[#09090B]' : 'text-[#3B82F6]'
+            }`}
+          />
+        );
+      case 'Notation':
+        return (
+          <BookOpen
+            className={`${sizeClass} shrink-0 ${
+              isActive ? 'text-[#09090B]' : 'text-zinc-400'
+            }`}
+          />
+        );
+      case 'Timer':
+        return (
+          <Timer
+            className={`${sizeClass} shrink-0 ${
+              isActive ? 'text-[#09090B]' : 'text-sky-400'
+            }`}
+          />
+        );
     }
-    if (item.icon === 'notation') {
-      return (
-        <BookOpen
-          className={`h-3.5 w-3.5 shrink-0 ${
-            isActive ? 'text-[#09090B]' : 'text-zinc-400'
-          }`}
-        />
-      );
-    }
-    if (item.accentBarClass) {
-      return (
-        <span
-          aria-hidden="true"
-          className={`h-3.5 w-1.5 shrink-0 rounded-full ${item.accentBarClass}`}
-        />
-      );
-    }
-    return null;
   };
 
   return (
@@ -419,26 +476,26 @@ export const App: React.FC = () => {
             </span>
           </button>
 
-          {/* Barra de navegación Desktop: contenedor definido + acentos claros + alto contraste */}
+          {/* Barra de navegación Desktop: 4 secciones principales con alto contraste */}
           <nav
-            aria-label="Etapas principal"
-            className="no-scrollbar hidden items-center gap-1 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900 p-1 lg:flex"
+            aria-label="Secciones principales"
+            className="hidden items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1 lg:flex"
           >
-            {NAV_ITEMS.map((item) => {
-              const isActive = activeTab === item.id;
+            {MAIN_NAV_ITEMS.map((item) => {
+              const isActive = activeSection === item.id;
               return (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => handleTabChange(item.id)}
+                  onClick={() => handleMainSectionChange(item.id)}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 text-xs transition-colors ${
+                  className={`inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-xs transition-colors ${
                     isActive
                       ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
                       : 'font-medium text-zinc-300 hover:bg-zinc-800 hover:text-[#FAFAFA]'
                   }`}
                 >
-                  {renderNavIndicator(item, isActive)}
+                  {renderMainNavIcon(item.id, isActive)}
                   <span>{item.label}</span>
                   {item.count !== undefined && (
                     <span
@@ -495,7 +552,7 @@ export const App: React.FC = () => {
       <main
         className={
           isTimerTab
-            ? 'flex w-full flex-1 flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0'
+            ? 'flex w-full flex-1 flex-col pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-0'
             : 'px-safe pb-dock mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-5 pt-4 sm:px-6 sm:pt-5 lg:grid-cols-12 lg:items-start lg:gap-6'
         }
       >
@@ -503,26 +560,73 @@ export const App: React.FC = () => {
           <TimerModule />
         ) : (
           <div className="min-w-0 lg:col-span-7">
-            {activeTab === 'Notation' ? (
+            {activeSection === 'Notation' ? (
               <NotationModule
                 selectedId={selection.id}
                 onSelectMove={handleSelectMove}
                 onSelectTrigger={handleSelectTrigger}
               />
             ) : (
-              <CfopCatalogModule
-                stage={activeTab}
-                selectedCaseId={selection.id}
-                onSelectCase={handleSelectCase}
-                isLeftyGlobal={isLeftyMode}
-                topFace={topFace}
-                learnedIds={
-                  activeTab === 'Reducido' ? reducidoLearnedIds : undefined
-                }
-                onToggleLearned={
-                  activeTab === 'Reducido' ? toggleReducidoLearned : undefined
-                }
-              />
+              <>
+                {activeSection === 'CFOP' && (
+                  <nav
+                    aria-label="Etapas CFOP"
+                    className="mb-3 grid grid-cols-4 gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1"
+                  >
+                    {CFOP_SUB_STAGE_ITEMS.map((sub) => {
+                      const isActive = activeCfopStage === sub.id;
+                      return (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => handleCfopStageChange(sub.id)}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={`inline-flex h-9 items-center justify-center gap-1 rounded-lg px-0.5 text-[11px] transition-colors sm:gap-1.5 sm:px-2.5 sm:text-xs ${
+                            isActive
+                              ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
+                              : 'font-medium text-zinc-300 hover:bg-zinc-800 hover:text-[#FAFAFA]'
+                          }`}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2 ${
+                              isActive ? sub.activeDotClass : sub.dotClass
+                            }`}
+                          />
+                          <span className="whitespace-nowrap">{sub.label}</span>
+                          <span
+                            className={`rounded px-0.5 py-0.5 font-mono text-[9px] tabular-nums leading-none sm:px-1.5 sm:text-[10px] ${
+                              isActive
+                                ? 'bg-zinc-900/10 font-semibold text-zinc-800'
+                                : 'bg-zinc-800 text-zinc-400'
+                            }`}
+                          >
+                            {sub.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </nav>
+                )}
+
+                <CfopCatalogModule
+                  stage={activeCatalogStage}
+                  selectedCaseId={selection.id}
+                  onSelectCase={handleSelectCase}
+                  isLeftyGlobal={isLeftyMode}
+                  topFace={topFace}
+                  learnedIds={
+                    activeCatalogStage === 'Reducido'
+                      ? reducidoLearnedIds
+                      : undefined
+                  }
+                  onToggleLearned={
+                    activeCatalogStage === 'Reducido'
+                      ? toggleReducidoLearned
+                      : undefined
+                  }
+                />
+              </>
             )}
           </div>
         )}
@@ -671,41 +775,29 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* Barra de navegación móvil: etiquetas completas, sin abreviaturas, scroll horizontal suave */}
+        {/* Barra de navegación móvil fija en 4 columnas sin scroll */}
         <nav
-          aria-label="Etapas móvil"
-          className="no-scrollbar flex items-center gap-1 overflow-x-auto scroll-smooth rounded-xl border border-zinc-800 bg-zinc-900 p-1"
+          aria-label="Secciones móviles"
+          className="grid grid-cols-4 gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1"
         >
-          {NAV_ITEMS.map((item) => {
-            const isActive = activeTab === item.id;
+          {MAIN_NAV_ITEMS.map((item) => {
+            const isActive = activeSection === item.id;
             return (
               <button
                 key={item.id}
-                ref={(el) => {
-                  mobileNavRefs.current[item.id] = el;
-                }}
                 type="button"
-                onClick={() => handleTabChange(item.id)}
+                onClick={() => handleMainSectionChange(item.id)}
                 aria-current={isActive ? 'page' : undefined}
-                className={`inline-flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-xs transition-colors ${
+                className={`flex h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[11px] leading-none transition-colors ${
                   isActive
                     ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
                     : 'font-medium text-zinc-300 active:bg-zinc-800'
                 }`}
               >
-                {renderNavIndicator(item, isActive)}
-                <span>{item.label}</span>
-                {item.count !== undefined && (
-                  <span
-                    className={`rounded px-1.5 py-0.5 font-mono text-[10px] tabular-nums leading-none ${
-                      isActive
-                        ? 'bg-zinc-900/10 font-semibold text-zinc-800'
-                        : 'bg-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    {item.count}
-                  </span>
-                )}
+                {renderMainNavIcon(item.id, isActive, 'h-4 w-4')}
+                <span className="max-w-full truncate whitespace-nowrap">
+                  {item.label}
+                </span>
               </button>
             );
           })}

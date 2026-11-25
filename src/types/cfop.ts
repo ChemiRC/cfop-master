@@ -1,15 +1,12 @@
-export type CfopStage =
-  | 'Notation'
-  | 'Reducido'
-  | 'Cross'
-  | 'F2L'
-  | 'OLL'
-  | 'PLL'
-  | 'Timer';
+export type MainSection = 'Reducido' | 'CFOP' | 'Notation' | 'Timer';
+
+export type CfopSubStage = 'Cross' | 'F2L' | 'OLL' | 'PLL';
+
+export type CfopStage = 'Notation' | 'Reducido' | CfopSubStage | 'Timer';
 
 export type LearningStage = Exclude<CfopStage, 'Notation' | 'Timer'>;
 
-export type VisualStage = 'Cross' | 'F2L' | 'OLL' | 'PLL';
+export type VisualStage = CfopSubStage;
 
 export type TopFaceColor = 'yellow' | 'white';
 

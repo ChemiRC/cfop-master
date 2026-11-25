@@ -5,6 +5,7 @@ import {
   Circle,
   ExternalLink,
   Search,
+  SlidersHorizontal,
   X,
 } from 'lucide-react';
 import {
@@ -133,6 +134,7 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
   const [selectedTag, setSelectedTag] = useState<string>('Todos');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showCrossTips, setShowCrossTips] = useState<boolean>(false);
+  const [showTagFilters, setShowTagFilters] = useState<boolean>(false);
 
   useEffect(() => {
     setScope('full');
@@ -140,6 +142,7 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
     setSelectedSubcategory('Todos');
     setSelectedTag('Todos');
     setSearchQuery('');
+    setShowTagFilters(false);
   }, [stage]);
 
   const isReducido = stage === 'Reducido';
@@ -368,43 +371,77 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
       {/* Barra de búsqueda + filtros pegajosa (Sticky) */}
       <div className="top-header sticky z-20 -mx-4 space-y-2 border-b border-[#222226] bg-[#09090B]/95 px-4 py-2.5 backdrop-blur-md sm:mx-0 sm:rounded-lg sm:border sm:bg-[#111113]/95 sm:p-2.5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          {/* Input de búsqueda por nombre/número/marca de tiempo */}
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-            <input
-              type="text"
-              inputMode="search"
-              enterKeyHint="search"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={`Buscar en ${
-                isReducido ? 'CFOP Reducido' : stage
-              } (ej. ${
-                isReducido
-                  ? 'Hongo, Sun, Aa, 04:43'
-                  : stage === 'OLL'
-                  ? 'OLL 21, Sune, Dot'
-                  : stage === 'PLL'
-                  ? 'PLL T, Ga, Faros'
-                  : 'F2L 01, Sexy, Slot'
-              })...`}
-              aria-label={`Buscar en ${stage}`}
-              className="h-10 w-full rounded-md border border-[#222226] bg-[#09090B] pr-9 pl-9 text-base text-zinc-100 placeholder-zinc-500 transition-colors focus:border-zinc-500 focus:outline-none sm:h-9 sm:text-sm"
-            />
-            {searchQuery && (
+          {/* Input de búsqueda + botón compacto de filtros por rasgo */}
+          <div className="flex items-center gap-1.5 sm:flex-1">
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+              <input
+                type="text"
+                inputMode="search"
+                enterKeyHint="search"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={`Buscar en ${
+                  isReducido ? 'CFOP Reducido' : stage
+                } (ej. ${
+                  isReducido
+                    ? 'Hongo, Sun, Aa, 04:43'
+                    : stage === 'OLL'
+                    ? 'OLL 21, Sune, Dot'
+                    : stage === 'PLL'
+                    ? 'PLL T, Ga, Faros'
+                    : 'F2L 01, Sexy, Slot'
+                })...`}
+                aria-label={`Buscar en ${stage}`}
+                className="h-10 w-full rounded-md border border-[#222226] bg-[#09090B] pr-9 pl-9 text-base text-zinc-100 placeholder-zinc-500 transition-colors focus:border-zinc-500 focus:outline-none sm:h-9 sm:text-sm"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setSearchQuery('');
+                  }}
+                  aria-label="Limpiar búsqueda"
+                  className="absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded text-zinc-500 hover:text-zinc-200"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {availableTags.length > 0 && !isReducido && (
               <button
                 type="button"
                 onClick={() => {
-                  triggerHaptic('light');
-                  setSearchQuery('');
+                  triggerHaptic('selection');
+                  setShowTagFilters((prev) => !prev);
                 }}
-                aria-label="Limpiar búsqueda"
-                className="absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded text-zinc-500 hover:text-zinc-200"
+                aria-expanded={showTagFilters}
+                aria-label={
+                  selectedTag !== 'Todos'
+                    ? `Filtros de rasgo (activo: ${selectedTag})`
+                    : 'Mostrar filtros de rasgo'
+                }
+                className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border px-2.5 font-mono text-xs font-medium transition-colors sm:h-9 ${
+                  selectedTag !== 'Todos' || showTagFilters
+                    ? 'border-[#FAFAFA] bg-[#FAFAFA] font-semibold text-[#09090B]'
+                    : 'border-[#222226] bg-[#09090B] text-zinc-300 hover:border-zinc-700 hover:text-[#FAFAFA]'
+                }`}
               >
-                <X className="h-4 w-4" />
+                <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
+                <span className="max-w-[5.5rem] truncate">
+                  {selectedTag !== 'Todos' ? selectedTag : 'Filtros'}
+                </span>
+                {selectedTag !== 'Todos' && (
+                  <span
+                    aria-hidden="true"
+                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#3B82F6]"
+                  />
+                )}
               </button>
             )}
           </div>
@@ -515,8 +552,8 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
           })}
         </div>
 
-        {/* Fila 2: Reconocimiento visual rápido por características */}
-        {availableTags.length > 0 && !isReducido && (
+        {/* Fila 2 colapsable: Reconocimiento visual rápido por características */}
+        {availableTags.length > 0 && !isReducido && showTagFilters && (
           <div className="no-scrollbar -mx-4 flex items-center gap-1 overflow-x-auto border-t border-[#222226]/60 px-4 pt-1.5 sm:mx-0 sm:flex-wrap sm:px-0">
             <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-zinc-600">
               RASGO:
