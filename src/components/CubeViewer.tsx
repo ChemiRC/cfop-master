@@ -5,15 +5,19 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Circle,
   Copy,
   ExternalLink,
+  Flame,
   Pause,
   Play,
+  Repeat,
   RotateCcw,
   SkipForward,
 } from 'lucide-react';
 import type {
   ActiveSelection,
+  CaseMastery,
   CfopStage,
   StickeringType,
   TopFaceColor,
@@ -22,16 +26,28 @@ import type {
   TwistyPlayerElement,
   VisualStage,
 } from '../types/cfop';
-import { mirrorAlgLR, splitAlgMoves } from '../utils/algHelpers';
+import { invertAlg, mirrorAlgLR, splitAlgMoves } from '../utils/algHelpers';
 import { triggerHaptic } from '../utils/haptics';
 import { AlgNotationBadges } from './AlgNotationBadges';
 import { Cube2DPreview } from './Cube2DPreview';
 
+export interface CubeViewerNavigation {
+  currentIndex: number;
+  total: number;
+  prevLabel?: string;
+  nextLabel?: string;
+  onPrev: () => void;
+  onNext: () => void;
+}
+
 interface CubeViewerProps {
   selection: ActiveSelection;
   isLeftyGlobal?: boolean;
-  isLearned?: boolean;
-  onToggleLearned?: () => void;
+  /** Estado de dominio del caso actual (Nuevo / Practicando / Dominado) */
+  mastery?: CaseMastery;
+  onCycleMastery?: () => void;
+  /** Navegación continua Anterior / Siguiente sobre la lista filtrada activa */
+  navigation?: CubeViewerNavigation;
   /** Desactiva atajos de teclado globales (ej. cuando la pestaña Timer está activa) */
   shortcutsEnabled?: boolean;
   /** Orientación del cubo: cara superior Amarilla (por defecto, z2) o Blanca */
@@ -123,14 +139,17 @@ IsolatedTwistyHost.displayName = 'IsolatedTwistyHost';
 export const CubeViewer: React.FC<CubeViewerProps> = ({
   selection,
   isLeftyGlobal,
-  isLearned,
-  onToggleLearned,
+  mastery,
+  onCycleMastery,
+  navigation,
   shortcutsEnabled = true,
   topFace,
   onToggleTopFace,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<TwistyPlayerElement | null>(null);
+  const loopTimerRef = useRef<number | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const [internalTopFace, setInternalTopFace] = useState<TopFaceColor>('yellow');
   const effectiveTopFace: TopFaceColor = topFace ?? internalTopFace;
@@ -168,17 +187,36 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
   );
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [isLooping, setIsLooping] = useState<boolean>(false);
   const [atStart, setAtStart] = useState<boolean>(true);
   const [atEnd, setAtEnd] = useState<boolean>(false);
   const [activeMoveIndex, setActiveMoveIndex] = useState<number>(-1);
   const [completedMoves, setCompletedMoves] = useState<number>(0);
   const [copied, setCopied] = useState<boolean>(false);
+  const [showSetup, setShowSetup] = useState<boolean>(false);
+  const [copiedSetup, setCopiedSetup] = useState<boolean>(false);
+
+  const isLoopingRef = useRef<boolean>(false);
+  isLoopingRef.current = isLooping;
+
+  const clearLoopTimer = useCallback(() => {
+    if (loopTimerRef.current !== null) {
+      window.clearTimeout(loopTimerRef.current);
+      loopTimerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     setIsMirrored(Boolean(isLeftyGlobal));
     setSelectedAlgIndex(0);
     setForceFullStickering(false);
   }, [selection.id, isLeftyGlobal]);
+
+  useEffect(() => {
+    clearLoopTimer();
+    setIsLooping(false);
+    setShowSetup(false);
+  }, [selection.id, clearLoopTimer]);
 
   const availableAlgs = useMemo(() => {
     const raw = [
@@ -197,6 +235,8 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     () => (isMirrored ? mirrorAlgLR(baseAlg) : baseAlg),
     [baseAlg, isMirrored]
   );
+
+  const setupAlg = useMemo(() => invertAlg(effectiveAlg), [effectiveAlg]);
 
   const moves = useMemo(() => splitAlgMoves(effectiveAlg), [effectiveAlg]);
 
@@ -333,6 +373,10 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     return () => {
       isMounted = false;
       window.clearTimeout(timeoutId);
+      if (loopTimerRef.current !== null) {
+        window.clearTimeout(loopTimerRef.current);
+        loopTimerRef.current = null;
+      }
       removeListeners?.();
       try {
         const currentPlayer = playerRef.current;
@@ -413,13 +457,34 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     }
   }, [playerReady, cameraPreset]);
 
+  // Bucle automático manos libres (repite tras pausa breve de 850ms)
+  useEffect(() => {
+    clearLoopTimer();
+    if (!isLooping || !playerReady || !atEnd || isPlaying) return;
+
+    loopTimerRef.current = window.setTimeout(() => {
+      const player = playerRef.current;
+      if (!player || !isLoopingRef.current) return;
+      try {
+        player.jumpToStart?.({ flash: false });
+        player.play?.();
+      } catch {
+        // Ignorar interrupción
+      }
+    }, 850);
+
+    return clearLoopTimer;
+  }, [isLooping, atEnd, isPlaying, playerReady, effectiveAlg, clearLoopTimer]);
+
   const handleTogglePlay = useCallback(() => {
     const player = playerRef.current;
     if (!player) return;
 
     triggerHaptic('medium');
+    clearLoopTimer();
     try {
       if (isPlaying) {
+        setIsLooping(false);
         player.pause?.();
       } else {
         if (atEnd) {
@@ -430,12 +495,36 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     } catch {
       // Ignorar error de reproducción
     }
-  }, [isPlaying, atEnd]);
+  }, [isPlaying, atEnd, clearLoopTimer]);
+
+  const handleToggleLoop = useCallback(() => {
+    const player = playerRef.current;
+    if (!player || !playerReady) return;
+    triggerHaptic('selection');
+    clearLoopTimer();
+
+    setIsLooping((prev) => {
+      const next = !prev;
+      if (next && !isPlaying) {
+        try {
+          if (atEnd) {
+            player.jumpToStart?.({ flash: false });
+          }
+          player.play?.();
+        } catch {
+          // Ignorar error de reproducción
+        }
+      }
+      return next;
+    });
+  }, [atEnd, clearLoopTimer, isPlaying, playerReady]);
 
   const handleReset = useCallback(() => {
     const player = playerRef.current;
     if (!player) return;
     triggerHaptic('medium');
+    clearLoopTimer();
+    setIsLooping(false);
     try {
       player.pause?.();
       player.jumpToStart?.({ flash: false });
@@ -444,34 +533,41 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     } catch {
       // Ignorar error
     }
-  }, []);
+  }, [clearLoopTimer]);
 
   const handleJumpToEnd = useCallback(() => {
     const player = playerRef.current;
     if (!player) return;
     triggerHaptic('medium');
+    clearLoopTimer();
+    setIsLooping(false);
     try {
       player.pause?.();
       player.jumpToEnd?.({ flash: false });
     } catch {
       // Ignorar error
     }
-  }, []);
+  }, [clearLoopTimer]);
 
-  const stepPlayer = useCallback((direction: 1 | -1) => {
-    const player = playerRef.current;
-    if (!player) return;
-    triggerHaptic('light');
-    try {
-      player.controller?.animationController?.play?.({
-        direction,
-        untilBoundary: 'move',
-        autoSkipToOtherEndIfStartingAtBoundary: false,
-      });
-    } catch {
-      // Ignorar error
-    }
-  }, []);
+  const stepPlayer = useCallback(
+    (direction: 1 | -1) => {
+      const player = playerRef.current;
+      if (!player) return;
+      triggerHaptic('light');
+      clearLoopTimer();
+      setIsLooping(false);
+      try {
+        player.controller?.animationController?.play?.({
+          direction,
+          untilBoundary: 'move',
+          autoSkipToOtherEndIfStartingAtBoundary: false,
+        });
+      } catch {
+        // Ignorar error
+      }
+    },
+    [clearLoopTimer]
+  );
 
   const handleStepForward = useCallback(() => {
     if (!atEnd) stepPlayer(1);
@@ -526,21 +622,27 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     handleReset,
   ]);
 
-  const handleJumpToMove = useCallback(async (index: number) => {
-    const player = playerRef.current;
-    if (!player) return;
-    triggerHaptic('light');
-    try {
-      player.pause?.();
-      const indexer = await player.experimentalModel?.indexer?.get();
-      if (indexer) {
-        player.timestamp =
-          indexer.indexToMoveStartTimestamp(index) + indexer.moveDuration(index);
+  const handleJumpToMove = useCallback(
+    async (index: number) => {
+      const player = playerRef.current;
+      if (!player) return;
+      triggerHaptic('light');
+      clearLoopTimer();
+      setIsLooping(false);
+      try {
+        player.pause?.();
+        const indexer = await player.experimentalModel?.indexer?.get();
+        if (indexer) {
+          player.timestamp =
+            indexer.indexToMoveStartTimestamp(index) +
+            indexer.moveDuration(index);
+        }
+      } catch {
+        // Ignorar error transitorio
       }
-    } catch {
-      // Ignorar error transitorio
-    }
-  }, []);
+    },
+    [clearLoopTimer]
+  );
 
   const handleToggleMirror = useCallback(() => {
     triggerHaptic('selection');
@@ -568,6 +670,46 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     }
   }, [effectiveAlg]);
 
+  const handleCopySetup = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(setupAlg);
+      triggerHaptic('success');
+      setCopiedSetup(true);
+      window.setTimeout(() => setCopiedSetup(false), 1600);
+    } catch {
+      // Portapapeles no disponible
+    }
+  }, [setupAlg]);
+
+  // Swipe horizontal seguro solo en cabecera y tira de secuencia (nunca en el visor 3D)
+  const handleSwipeStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    swipeStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+  }, []);
+
+  const handleSwipeEnd = useCallback(
+    (e: React.TouchEvent) => {
+      const start = swipeStartRef.current;
+      swipeStartRef.current = null;
+      if (!start || !navigation || navigation.total <= 1) return;
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      if (Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0) {
+          navigation.onNext();
+        } else {
+          navigation.onPrev();
+        }
+      }
+    },
+    [navigation]
+  );
+
   const stageAccent = STAGE_ACCENTS[selection.stage] ?? STAGE_ACCENTS.Notation;
   const previewStageFor2D: VisualStage =
     selection.visualStage ??
@@ -578,10 +720,38 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
       : selection.stage);
   const isNotation = selection.stage === 'Notation';
 
+  const effectiveMastery: CaseMastery = mastery ?? 'unlearned';
+
+  const masteryMeta =
+    effectiveMastery === 'mastered'
+      ? {
+          label: 'Dominado',
+          className:
+            'border-[#10B981]/50 bg-[#10B981]/15 text-[#10B981] hover:bg-[#10B981]/20',
+          title: 'Dominado · Toca para reiniciar estado',
+        }
+      : effectiveMastery === 'practicing'
+      ? {
+          label: 'Practicando',
+          className:
+            'border-amber-500/50 bg-amber-500/15 text-amber-400 hover:bg-amber-500/20',
+          title: 'Practicando · Toca para marcar como Dominado',
+        }
+      : {
+          label: 'Nuevo',
+          className:
+            'border-[#222226] bg-[#09090B] text-zinc-400 hover:border-zinc-700 hover:text-zinc-200',
+          title: 'Por aprender · Toca para marcar como Practicando',
+        };
+
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-[#222226] bg-[#111113]">
-      {/* Cabecera del caso */}
-      <div className="flex items-center gap-2 border-b border-[#222226] px-3 py-2.5">
+      {/* Cabecera del caso (soporta swipe horizontal seguro para Anterior/Siguiente) */}
+      <div
+        onTouchStart={handleSwipeStart}
+        onTouchEnd={handleSwipeEnd}
+        className="flex items-center gap-1.5 border-b border-[#222226] px-3 py-2"
+      >
         <span
           translate="no"
           className={`shrink-0 font-mono text-xs font-semibold tabular-nums ${stageAccent.textClass}`}
@@ -606,35 +776,29 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
             L↔R
           </span>
         )}
-        {onToggleLearned && (
+        {onCycleMastery && !isNotation && (
           <button
             type="button"
-            onClick={() => {
-              triggerHaptic('success');
-              onToggleLearned();
-            }}
-            aria-pressed={Boolean(isLearned)}
-            title={
-              isLearned
-                ? 'Marcar como pendiente'
-                : 'Marcar como aprendido (guardado localmente)'
-            }
-            className={`inline-flex h-8 shrink-0 items-center gap-1 rounded-md border px-2 font-mono text-[11px] transition-colors ${
-              isLearned
-                ? 'border-[#10B981]/50 bg-[#10B981]/15 text-[#10B981]'
-                : 'border-[#222226] bg-[#09090B] text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
-            }`}
+            onClick={onCycleMastery}
+            title={masteryMeta.title}
+            aria-label={`Estado de aprendizaje: ${masteryMeta.label}. Toca para cambiar`}
+            className={`inline-flex h-8 shrink-0 items-center gap-1 rounded-md border px-2 font-mono text-[11px] font-medium transition-colors ${masteryMeta.className}`}
           >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">
-              {isLearned ? 'Aprendido' : 'Marcar'}
-            </span>
+            {effectiveMastery === 'mastered' ? (
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            ) : effectiveMastery === 'practicing' ? (
+              <Flame className="h-3.5 w-3.5" />
+            ) : (
+              <Circle className="h-3.5 w-3.5" />
+            )}
+            <span>{masteryMeta.label}</span>
           </button>
         )}
         <button
           type="button"
           onClick={handleCopyAlg}
           aria-label="Copiar algoritmo"
+          title="Copiar algoritmo"
           className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md px-2 font-mono text-[11px] text-zinc-400 transition-colors hover:bg-[#16161A] hover:text-[#FAFAFA]"
         >
           {copied ? (
@@ -646,16 +810,17 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
         </button>
       </div>
 
-      {/* Viewport 3D / 2D con etiquetas en las esquinas */}
-      <div className="relative h-[clamp(195px,30dvh,255px)] border-b border-[#222226] bg-[#0C0C0E] lg:h-64">
+      {/* Viewport 3D / 2D con etiquetas y chip compacto de orientación U en la esquina */}
+      <div className="relative h-[clamp(180px,28dvh,240px)] border-b border-[#222226] bg-[#0C0C0E] lg:h-64">
         <IsolatedTwistyHost ref={containerRef} hidden={viewMode !== '3D'} />
 
         {viewMode === '2D' && (
-          <div className="absolute inset-0 flex items-center justify-center [&>div]:h-40 [&>div]:w-40">
+          <div className="absolute inset-0 flex items-center justify-center">
             <Cube2DPreview
               alg={effectiveAlg}
               stage={previewStageFor2D}
               topFace={effectiveTopFace}
+              className="h-40 w-40 p-1.5"
             />
           </div>
         )}
@@ -679,28 +844,56 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
           <span>{moves.length} HTM</span>
         </div>
 
-        {/* Superior derecha: 3D / 2D */}
+        {/* Superior derecha: Orientación U (Amarilla/Blanca) + 3D / 2D */}
         <div
           translate="no"
-          className="absolute top-2 right-2 z-10 inline-flex rounded-md border border-[#222226] bg-[#111113]/90 p-0.5"
+          className="absolute top-2 right-2 z-10 flex items-center gap-1"
         >
-          {(['3D', '2D'] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => {
-                triggerHaptic('selection');
-                setViewMode(mode);
-              }}
-              className={`h-7 rounded px-2.5 font-mono text-[11px] font-medium transition-colors lg:h-6 lg:px-2 ${
-                viewMode === mode
-                  ? 'bg-[#FAFAFA] text-[#09090B]'
-                  : 'text-zinc-400 hover:text-zinc-200'
+          <button
+            type="button"
+            onClick={handleToggleOrientation}
+            aria-label={
+              effectiveTopFace === 'yellow'
+                ? 'Cara superior Amarilla. Toca para cambiar a Blanca arriba'
+                : 'Cara superior Blanca. Toca para cambiar a Amarilla arriba'
+            }
+            title={
+              effectiveTopFace === 'yellow'
+                ? 'Cara arriba (U): Amarilla · Toca para cambiar a Blanca'
+                : 'Cara arriba (U): Blanca · Toca para cambiar a Amarilla'
+            }
+            className="inline-flex h-8 items-center gap-1 rounded-md border border-[#222226] bg-[#111113]/90 px-2 font-mono text-[10px] font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:text-[#FAFAFA] lg:h-7"
+          >
+            <span className="text-zinc-500">U:</span>
+            <span
+              aria-hidden="true"
+              className={`h-2.5 w-2.5 rounded-[2px] border ${
+                effectiveTopFace === 'yellow'
+                  ? 'border-zinc-900/40 bg-[#EAB308]'
+                  : 'border-zinc-500 bg-[#FAFAFA]'
               }`}
-            >
-              {mode}
-            </button>
-          ))}
+            />
+          </button>
+
+          <div className="inline-flex rounded-md border border-[#222226] bg-[#111113]/90 p-0.5">
+            {(['3D', '2D'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => {
+                  triggerHaptic('selection');
+                  setViewMode(mode);
+                }}
+                className={`h-7 rounded px-2 font-mono text-[11px] font-medium transition-colors lg:h-6 ${
+                  viewMode === mode
+                    ? 'bg-[#FAFAFA] text-[#09090B]'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Inferior izquierda: cámara */}
@@ -771,60 +964,9 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
         </div>
       </div>
 
-      {/* Barra de orientación del cubo: Cara arriba Amarilla (z2) / Blanca */}
-      <div className="flex items-center justify-between gap-2 border-b border-[#222226] bg-[#0C0C0E] px-3 py-1.5">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-          Cara arriba (U):
-        </span>
-        <div
-          role="group"
-          aria-label="Orientación de cara superior"
-          className="inline-flex items-center rounded-md border border-zinc-800 bg-[#09090B] p-0.5"
-        >
-          <button
-            type="button"
-            onClick={() => {
-              if (effectiveTopFace !== 'yellow') handleToggleOrientation();
-            }}
-            aria-pressed={effectiveTopFace === 'yellow'}
-            title="Cara amarilla arriba / blanca abajo (orientación estándar CFOP)"
-            className={`inline-flex h-7 items-center gap-1.5 rounded px-2.5 font-mono text-[11px] font-medium transition-colors lg:h-6 lg:px-2 ${
-              effectiveTopFace === 'yellow'
-                ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <span
-              aria-hidden="true"
-              className="h-2.5 w-2.5 rounded-[2px] border border-zinc-900/40 bg-[#EAB308]"
-            />
-            <span>Amarilla</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (effectiveTopFace !== 'white') handleToggleOrientation();
-            }}
-            aria-pressed={effectiveTopFace === 'white'}
-            title="Cara blanca arriba / amarilla abajo"
-            className={`inline-flex h-7 items-center gap-1.5 rounded px-2.5 font-mono text-[11px] font-medium transition-colors lg:h-6 lg:px-2 ${
-              effectiveTopFace === 'white'
-                ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <span
-              aria-hidden="true"
-              className="h-2.5 w-2.5 rounded-[2px] border border-zinc-500 bg-[#FAFAFA]"
-            />
-            <span>Blanca</span>
-          </button>
-        </div>
-      </div>
-
       {/* Selector explícito de algoritmos alternativos cuando el caso tiene variantes */}
       {availableAlgs.length > 1 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto border-b border-[#222226] bg-[#0C0C0E] px-3 py-1.5 no-scrollbar">
+        <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto border-b border-[#222226] bg-[#0C0C0E] px-3 py-1.5">
           <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-zinc-500">
             VARIANTE:
           </span>
@@ -857,16 +999,16 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
 
       {/* Guía Ergonómica Técnica: Agarre Inicial, AUF y Video Timestamp (CFOP Reducido) */}
       {(selection.grip || selection.auf || selection.videoUrl) && (
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-[#222226] bg-[#0C0C0E] px-3 py-1.5 font-mono text-[11px] tabular-nums text-zinc-400">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-[#222226] bg-[#0C0C0E] px-3 py-1.5 font-mono text-[11px] tabular-nums text-zinc-400">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             {selection.grip && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <span className="text-zinc-600">AGARRE:</span>
                 <span className="text-zinc-200">{selection.grip}</span>
               </div>
             )}
             {selection.auf && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <span className="text-zinc-600">AUF:</span>
                 <span className="text-zinc-200">{selection.auf}</span>
               </div>
@@ -886,14 +1028,67 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
         </div>
       )}
 
-      {/* Secuencia Karaoke con Chunking Cognitivo + Auto-scroll horizontal en móvil */}
-      <div className="border-b border-[#222226] bg-[#09090B] px-3 py-2.5">
-        <div className="mb-1.5 flex items-center justify-between font-mono text-[11px] tabular-nums text-zinc-500">
+      {/* Secuencia Karaoke con Chunking Cognitivo + Setup Inverso + Swipe horizontal */}
+      <div
+        onTouchStart={handleSwipeStart}
+        onTouchEnd={handleSwipeEnd}
+        className="border-b border-[#222226] bg-[#09090B] px-3 py-2"
+      >
+        <div className="mb-1 flex items-center justify-between gap-2 font-mono text-[11px] tabular-nums text-zinc-500">
           <span>Secuencia (toca un paso)</span>
-          <span translate="no" className="text-zinc-400">
-            {Math.min(completedMoves, moves.length)}/{moves.length} HTM
-          </span>
+          <div className="flex items-center gap-2">
+            {(!isNotation || moves.length > 1) && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('selection');
+                  setShowSetup((prev) => !prev);
+                }}
+                aria-expanded={showSetup}
+                title="Mostrar algoritmo inverso para armar este caso desde un cubo resuelto"
+                className={`inline-flex h-6 items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium transition-colors ${
+                  showSetup
+                    ? 'border-[#FAFAFA] bg-[#FAFAFA] text-[#09090B]'
+                    : 'border-[#222226] bg-[#111113] text-zinc-300 hover:border-zinc-700 hover:text-[#FAFAFA]'
+                }`}
+              >
+                <span>Setup</span>
+              </button>
+            )}
+            <span translate="no" className="text-zinc-400">
+              {Math.min(completedMoves, moves.length)}/{moves.length} HTM
+            </span>
+          </div>
         </div>
+
+        {showSetup && (
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-md border border-[#222226] bg-[#111113] px-2.5 py-1.5">
+            <div className="min-w-0">
+              <span className="block font-mono text-[9px] uppercase tracking-wider text-zinc-500">
+                Setup desde cubo resuelto (inverso)
+              </span>
+              <p
+                translate="no"
+                className="truncate font-mono text-xs tabular-nums text-zinc-200"
+              >
+                {setupAlg}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCopySetup}
+              aria-label="Copiar setup inverso"
+              title="Copiar setup inverso"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-[#222226] bg-[#09090B] text-zinc-400 hover:text-[#FAFAFA]"
+            >
+              {copiedSetup ? (
+                <Check className="h-3.5 w-3.5 text-[#10B981]" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </div>
+        )}
 
         <AlgNotationBadges
           alg={effectiveAlg}
@@ -904,8 +1099,8 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
         />
       </div>
 
-      {/* Controles de reproducción (44x44px mínimo en móvil) + velocidad 5 niveles */}
-      <div className="space-y-2.5 border-b border-[#222226] px-3 py-3">
+      {/* Controles de reproducción manos libres (Play + Bucle + Paso a paso) + Velocidad + Anterior/Siguiente */}
+      <div className="space-y-2 border-b border-[#222226] px-3 py-2.5">
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -951,6 +1146,26 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
 
           <button
             type="button"
+            onClick={handleToggleLoop}
+            disabled={!playerReady}
+            aria-pressed={isLooping}
+            aria-label={isLooping ? 'Desactivar bucle automático' : 'Activar bucle automático'}
+            title={
+              isLooping
+                ? 'Bucle activo · Se repite automáticamente manos libres'
+                : 'Activar repetición en bucle manos libres'
+            }
+            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed disabled:opacity-35 lg:h-9 lg:w-9 ${
+              isLooping
+                ? 'border-[#10B981] bg-[#10B981]/20 text-[#10B981]'
+                : 'border-zinc-800 bg-[#09090B] text-zinc-300 hover:bg-[#16161A] hover:text-[#FAFAFA] active:bg-[#1C1C21]'
+            }`}
+          >
+            <Repeat className="h-4 w-4" />
+          </button>
+
+          <button
+            type="button"
             onClick={handleStepForward}
             disabled={!playerReady || atEnd}
             aria-label="Paso siguiente"
@@ -966,7 +1181,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
             disabled={!playerReady}
             aria-label="Ir al final"
             title="Ir al final"
-            className={CTRL_BTN}
+            className={`${CTRL_BTN} hidden sm:inline-flex`}
           >
             <SkipForward className="h-4 w-4" />
           </button>
@@ -1001,6 +1216,42 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
             );
           })}
         </div>
+
+        {/* Navegación continua Anterior / Siguiente sobre la lista filtrada */}
+        {navigation && navigation.total > 1 && (
+          <div className="flex items-center gap-1.5 pt-0.5">
+            <button
+              type="button"
+              onClick={navigation.onPrev}
+              aria-label="Caso anterior"
+              className="inline-flex h-10 min-w-0 flex-1 items-center justify-start gap-1 rounded-md border border-zinc-800 bg-[#09090B] px-2.5 font-mono text-xs text-zinc-300 transition-colors hover:border-zinc-700 hover:text-[#FAFAFA] active:bg-[#1C1C21] lg:h-8"
+            >
+              <ChevronLeft className="h-4 w-4 shrink-0 text-zinc-400" />
+              <span className="truncate">
+                {navigation.prevLabel ?? 'Anterior'}
+              </span>
+            </button>
+
+            <span
+              translate="no"
+              className="shrink-0 px-1.5 font-mono text-[11px] tabular-nums text-zinc-500"
+            >
+              {navigation.currentIndex + 1}/{navigation.total}
+            </span>
+
+            <button
+              type="button"
+              onClick={navigation.onNext}
+              aria-label="Caso siguiente"
+              className="inline-flex h-10 min-w-0 flex-1 items-center justify-end gap-1 rounded-md border border-zinc-800 bg-[#09090B] px-2.5 font-mono text-xs text-zinc-300 transition-colors hover:border-zinc-700 hover:text-[#FAFAFA] active:bg-[#1C1C21] lg:h-8"
+            >
+              <span className="truncate">
+                {navigation.nextLabel ?? 'Siguiente'}
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" />
+            </button>
+          </div>
+        )}
 
         {/* Atajos de teclado: solo en pantallas con teclado */}
         <div className="hidden items-center justify-center gap-4 text-[11px] text-zinc-500 lg:flex">

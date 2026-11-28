@@ -1,9 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Brain,
+  Check,
   CheckCircle2,
   ChevronDown,
   Circle,
+  Copy,
   ExternalLink,
+  Flame,
+  LayoutGrid,
+  List,
   Search,
   SlidersHorizontal,
   X,
@@ -20,6 +26,7 @@ import {
   TWO_LOOK_PLL_IDS,
 } from '../data/cfopData';
 import type {
+  CaseMastery,
   CfopCase,
   LearningStage,
   TopFaceColor,
@@ -35,15 +42,22 @@ interface CfopCatalogModuleProps {
   selectedCaseId: string;
   onSelectCase: (cfopCase: CfopCase) => void;
   isLeftyGlobal?: boolean;
-  /** Conjunto de IDs aprendidos (persistido en localStorage) para CFOP Reducido */
-  learnedIds?: Set<string>;
-  onToggleLearned?: (id: string) => void;
   /** Orientación superior del cubo ('yellow' por defecto o 'white') */
   topFace?: TopFaceColor;
+  /** Estado universal de dominio (Nuevo / Practicando / Dominado) */
+  getMastery: (id: string) => CaseMastery;
+  onCycleMastery: (id: string) => void;
+  /** Abre el entrenador Active Recall sobre los casos filtrados actuales */
+  onStartPractice: (cases: CfopCase[], label: string) => void;
+  /** Reporta los casos filtrados activos para habilitar Anterior/Siguiente en CubeViewer */
+  onFilteredCasesChange?: (cases: CfopCase[]) => void;
 }
 
 type CatalogScope = 'full' | '2look';
-type LearnedFilter = 'all' | 'pending' | 'learned';
+type MasteryFilter = 'all' | CaseMastery;
+type CatalogViewMode = 'visual' | 'list';
+
+const CATALOG_VIEW_STORAGE_KEY = 'cfop_catalog_view';
 
 const STAGE_META: Record<
   LearningStage,
@@ -56,7 +70,7 @@ const STAGE_META: Record<
   }
 > = {
   Reducido: {
-    name: 'CFOP Reducido · Guía JS cuber',
+    name: 'Guía JS cuber',
     description:
       '7 OLL + 2 consejos de cruz + 8 PLL con notación WCA y marcas de tiempo.',
     dotColor: 'bg-[#10B981]',
@@ -71,21 +85,21 @@ const STAGE_META: Record<
     twoLookLabel: 'Básicos',
   },
   F2L: {
-    name: 'First Two Layers (41 Casos)',
+    name: 'First Two Layers',
     description: 'Empareja esquina y arista e insértalas juntas en cada ranura.',
     dotColor: 'bg-[#3B82F6]',
     codeColor: 'text-[#3B82F6]',
     twoLookLabel: 'Esenciales',
   },
   OLL: {
-    name: 'Orientation of the Last Layer (57 Casos)',
+    name: 'Orientation of Last Layer',
     description: 'Orienta toda la cara superior amarilla en 1 o 2 pasos.',
     dotColor: 'bg-[#EAB308]',
     codeColor: 'text-[#EAB308]',
     twoLookLabel: '2-Look OLL',
   },
   PLL: {
-    name: 'Permutation of the Last Layer (21 Casos)',
+    name: 'Permutation of Last Layer',
     description: 'Permuta las piezas de la capa superior para terminar el cubo.',
     dotColor: 'bg-[#EF4444]',
     codeColor: 'text-[#EF4444]',
@@ -119,31 +133,83 @@ function getSectionBadgeClass(badge?: string): string {
   return 'border-zinc-700 bg-zinc-900 text-zinc-300';
 }
 
+function loadInitialViewMode(): CatalogViewMode {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const saved = window.localStorage.getItem(CATALOG_VIEW_STORAGE_KEY);
+      if (saved === 'visual' || saved === 'list') return saved;
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  if (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(max-width: 639px)').matches
+  ) {
+    return 'visual';
+  }
+  return 'list';
+}
+
 export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
   stage,
   selectedCaseId,
   onSelectCase,
   isLeftyGlobal = false,
-  learnedIds,
-  onToggleLearned,
   topFace = 'yellow',
+  getMastery,
+  onCycleMastery,
+  onStartPractice,
+  onFilteredCasesChange,
 }) => {
   const [scope, setScope] = useState<CatalogScope>('full');
-  const [learnedFilter, setLearnedFilter] = useState<LearnedFilter>('all');
+  const [masteryFilter, setMasteryFilter] = useState<MasteryFilter>('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('Todos');
   const [selectedTag, setSelectedTag] = useState<string>('Todos');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showCrossTips, setShowCrossTips] = useState<boolean>(false);
-  const [showTagFilters, setShowTagFilters] = useState<boolean>(false);
+  const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [copiedCaseId, setCopiedCaseId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<CatalogViewMode>(loadInitialViewMode);
 
   useEffect(() => {
     setScope('full');
-    setLearnedFilter('all');
+    setMasteryFilter('all');
     setSelectedSubcategory('Todos');
     setSelectedTag('Todos');
     setSearchQuery('');
-    setShowTagFilters(false);
+    setShowFilters(false);
   }, [stage]);
+
+  const handleToggleViewMode = useCallback(() => {
+    triggerHaptic('selection');
+    setViewMode((prev) => {
+      const next: CatalogViewMode = prev === 'visual' ? 'list' : 'visual';
+      try {
+        window.localStorage.setItem(CATALOG_VIEW_STORAGE_KEY, next);
+      } catch {
+        // Ignore storage errors
+      }
+      return next;
+    });
+  }, []);
+
+  const handleQuickCopy = useCallback(
+    async (e: React.MouseEvent, caseId: string, algText: string) => {
+      e.stopPropagation();
+      try {
+        await navigator.clipboard.writeText(algText);
+        triggerHaptic('success');
+        setCopiedCaseId(caseId);
+        window.setTimeout(() => {
+          setCopiedCaseId((prev) => (prev === caseId ? null : prev));
+        }, 1400);
+      } catch {
+        // Portapapeles no disponible
+      }
+    },
+    []
+  );
 
   const isReducido = stage === 'Reducido';
   const subcategories = CFOP_SUBCATEGORIES[stage] ?? ['Todos'];
@@ -159,10 +225,18 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
     [stageCases]
   );
 
-  const learnedCount = useMemo(() => {
-    if (!isReducido || !learnedIds) return 0;
-    return stageCases.filter((c) => learnedIds.has(c.id)).length;
-  }, [isReducido, learnedIds, stageCases]);
+  const masteryCounts = useMemo(() => {
+    let mastered = 0;
+    let practicing = 0;
+    let unlearned = 0;
+    for (const c of stageCases) {
+      const status = getMastery(c.id);
+      if (status === 'mastered') mastered += 1;
+      else if (status === 'practicing') practicing += 1;
+      else unlearned += 1;
+    }
+    return { mastered, practicing, unlearned };
+  }, [getMastery, stageCases]);
 
   const subcategoryCounts = useMemo(() => {
     const counts: Record<string, number> = { Todos: stageCases.length };
@@ -192,10 +266,8 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
         return false;
       }
 
-      if (isReducido && learnedIds && learnedFilter !== 'all') {
-        const isDone = learnedIds.has(item.id);
-        if (learnedFilter === 'learned' && !isDone) return false;
-        if (learnedFilter === 'pending' && isDone) return false;
+      if (masteryFilter !== 'all' && getMastery(item.id) !== masteryFilter) {
+        return false;
       }
 
       if (
@@ -242,77 +314,108 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
   }, [
     stageCases,
     scope,
-    isReducido,
-    learnedIds,
-    learnedFilter,
+    masteryFilter,
+    getMastery,
     selectedSubcategory,
     selectedTag,
     searchQuery,
   ]);
 
+  useEffect(() => {
+    onFilteredCasesChange?.(filteredCases);
+  }, [filteredCases, onFilteredCasesChange]);
+
+  const activeFilterCount =
+    (masteryFilter !== 'all' ? 1 : 0) + (selectedTag !== 'Todos' ? 1 : 0);
+
+  const totalCount = Math.max(1, stageCases.length);
+  const masteredPct = (masteryCounts.mastered / totalCount) * 100;
+  const practicingPct = (masteryCounts.practicing / totalCount) * 100;
+
+  const practiceLabel = useMemo(() => {
+    const base = isReducido ? 'CFOP Reducido' : stage;
+    const parts: string[] = [base];
+    if (scope === '2look') parts.push(meta.twoLookLabel);
+    if (selectedSubcategory !== 'Todos') parts.push(selectedSubcategory);
+    if (masteryFilter === 'practicing') parts.push('Practicando');
+    else if (masteryFilter === 'unlearned') parts.push('Por aprender');
+    else if (masteryFilter === 'mastered') parts.push('Dominados');
+    return parts.join(' · ');
+  }, [
+    isReducido,
+    masteryFilter,
+    meta.twoLookLabel,
+    scope,
+    selectedSubcategory,
+    stage,
+  ]);
+
   return (
-    <div className="space-y-3 sm:space-y-4">
-      {/* Encabezado de etapa */}
-      <header className="flex items-end justify-between gap-3 px-0.5">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
+    <div className="space-y-2.5 sm:space-y-3.5">
+      {/* Encabezado compacto de etapa + barra universal de dominio (2 segmentos) */}
+      <header className="space-y-1.5 px-0.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <span className={`h-2 w-2 shrink-0 rounded-full ${meta.dotColor}`} />
-            <h1 className="truncate text-lg font-semibold tracking-tight text-[#FAFAFA] sm:text-xl">
+            <h1 className="truncate text-base font-semibold tracking-tight text-[#FAFAFA] sm:text-lg">
               <span translate="no">
                 {isReducido ? 'CFOP Reducido' : stage}
               </span>
               <span className="ml-2 hidden font-normal text-zinc-500 sm:inline">
-                {isReducido ? 'JS cuber' : meta.name}
+                {meta.name}
               </span>
             </h1>
           </div>
-          <p className="mt-0.5 text-xs text-zinc-400 sm:text-sm">
-            {meta.description}
-          </p>
+
+          <div className="flex shrink-0 items-center gap-2 font-mono text-[11px] tabular-nums">
+            {masteryCounts.practicing > 0 && (
+              <span className="text-amber-400" title="En práctica">
+                {masteryCounts.practicing} práct.
+              </span>
+            )}
+            <span className="text-[#10B981]" title="Casos dominados">
+              {masteryCounts.mastered}/{stageCases.length}
+            </span>
+          </div>
         </div>
-        <span className="shrink-0 font-mono text-xs tabular-nums text-zinc-500">
-          {filteredCases.length === stageCases.length
-            ? `${stageCases.length} casos`
-            : `${filteredCases.length}/${stageCases.length}`}
-        </span>
+
+        {/* Barra de progreso dual: Dominados (esmeralda) + Practicando (ámbar) */}
+        <div
+          role="progressbar"
+          aria-label={`Progreso de ${stage}: ${masteryCounts.mastered} dominados, ${masteryCounts.practicing} practicando de ${stageCases.length}`}
+          aria-valuenow={masteryCounts.mastered}
+          aria-valuemin={0}
+          aria-valuemax={stageCases.length}
+          className="flex h-1 w-full overflow-hidden rounded-full bg-zinc-900"
+        >
+          <div
+            className="h-full bg-[#10B981] transition-all duration-300"
+            style={{ width: `${masteredPct}%` }}
+          />
+          <div
+            className="h-full bg-amber-400 transition-all duration-300"
+            style={{ width: `${practicingPct}%` }}
+          />
+        </div>
       </header>
 
-      {/* Panel técnico de guía y progreso local para CFOP Reducido */}
+      {/* Panel compacto de capítulos de video para CFOP Reducido */}
       {isReducido && (
-        <section className="space-y-2.5 rounded-lg border border-[#222226] bg-[#111113] p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2 font-mono text-xs tabular-nums">
-              <span className="text-zinc-400">Progreso local:</span>
-              <span className="font-semibold text-[#10B981]">
-                {learnedCount}/{stageCases.length}
-              </span>
-              <span className="text-zinc-600">
-                ({Math.round((learnedCount / Math.max(1, stageCases.length)) * 100)}
-                %)
-              </span>
-            </div>
-
+        <section className="space-y-2 rounded-lg border border-[#222226] bg-[#111113] p-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-xs text-zinc-400">{meta.description}</p>
             <a
               href={CFOP_REDUCIDO_VIDEO_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded border border-[#222226] bg-[#09090B] px-2 py-1 font-mono text-[11px] text-zinc-300 transition-colors hover:border-zinc-700 hover:text-[#FAFAFA]"
+              className="inline-flex shrink-0 items-center gap-1 rounded border border-[#222226] bg-[#09090B] px-2 py-1 font-mono text-[10px] text-zinc-300 transition-colors hover:border-zinc-700 hover:text-[#FAFAFA]"
             >
-              <span>Video guía JS cuber</span>
+              <span>Video JS cuber</span>
               <ExternalLink className="h-3 w-3 text-zinc-500" />
             </a>
           </div>
 
-          <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-900">
-            <div
-              className="h-full bg-[#10B981] transition-all duration-300"
-              style={{
-                width: `${(learnedCount / Math.max(1, stageCases.length)) * 100}%`,
-              }}
-            />
-          </div>
-
-          <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto pt-0.5">
+          <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto">
             {CFOP_REDUCIDO_CHAPTERS.map((chap) => (
               <a
                 key={chap.timestamp}
@@ -339,9 +442,9 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
               setShowCrossTips((prev) => !prev);
             }}
             aria-expanded={showCrossTips}
-            className="flex h-11 w-full items-center justify-between px-3 text-left"
+            className="flex h-10 w-full items-center justify-between px-3 text-left"
           >
-            <span className="text-sm font-medium text-zinc-200">
+            <span className="text-xs font-medium text-zinc-200 sm:text-sm">
               Consejos clave de inspección y cruz
             </span>
             <ChevronDown
@@ -368,160 +471,158 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
         </section>
       )}
 
-      {/* Barra de búsqueda + filtros pegajosa (Sticky) */}
-      <div className="top-header sticky z-20 -mx-4 space-y-2 border-b border-[#222226] bg-[#09090B]/95 px-4 py-2.5 backdrop-blur-md sm:mx-0 sm:rounded-lg sm:border sm:bg-[#111113]/95 sm:p-2.5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          {/* Input de búsqueda + botón compacto de filtros por rasgo */}
-          <div className="flex items-center gap-1.5 sm:flex-1">
-            <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-              <input
-                type="text"
-                inputMode="search"
-                enterKeyHint="search"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={`Buscar en ${
-                  isReducido ? 'CFOP Reducido' : stage
-                } (ej. ${
-                  isReducido
-                    ? 'Hongo, Sun, Aa, 04:43'
-                    : stage === 'OLL'
-                    ? 'OLL 21, Sune, Dot'
-                    : stage === 'PLL'
-                    ? 'PLL T, Ga, Faros'
-                    : 'F2L 01, Sexy, Slot'
-                })...`}
-                aria-label={`Buscar en ${stage}`}
-                className="h-10 w-full rounded-md border border-[#222226] bg-[#09090B] pr-9 pl-9 text-base text-zinc-100 placeholder-zinc-500 transition-colors focus:border-zinc-500 focus:outline-none sm:h-9 sm:text-sm"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setSearchQuery('');
-                  }}
-                  aria-label="Limpiar búsqueda"
-                  className="absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded text-zinc-500 hover:text-zinc-200"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            {availableTags.length > 0 && !isReducido && (
+      {/* Barra Sticky ultra-compacta de 2 filas (~82px en móvil) */}
+      <div className="top-header sticky z-20 -mx-4 space-y-1.5 border-b border-[#222226] bg-[#09090B]/95 px-4 py-2 backdrop-blur-md sm:mx-0 sm:rounded-lg sm:border sm:bg-[#111113]/95 sm:p-2.5">
+        {/* Fila 1: Buscador + Filtros (con badge) + Vista Visual/Lista + Practicar */}
+        <div className="flex items-center gap-1.5">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+            <input
+              type="text"
+              inputMode="search"
+              enterKeyHint="search"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={`Buscar ${
+                isReducido
+                  ? 'Reducido...'
+                  : stage === 'OLL'
+                  ? 'OLL 21, Sune...'
+                  : stage === 'PLL'
+                  ? 'PLL T, Ga...'
+                  : `${stage}...`
+              }`}
+              aria-label={`Buscar en ${stage}`}
+              className="h-9 w-full rounded-md border border-[#222226] bg-[#09090B] pr-8 pl-8 text-base text-zinc-100 placeholder-zinc-500 transition-colors focus:border-zinc-500 focus:outline-none sm:text-sm"
+            />
+            {searchQuery && (
               <button
                 type="button"
                 onClick={() => {
-                  triggerHaptic('selection');
-                  setShowTagFilters((prev) => !prev);
+                  triggerHaptic('light');
+                  setSearchQuery('');
                 }}
-                aria-expanded={showTagFilters}
-                aria-label={
-                  selectedTag !== 'Todos'
-                    ? `Filtros de rasgo (activo: ${selectedTag})`
-                    : 'Mostrar filtros de rasgo'
-                }
-                className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border px-2.5 font-mono text-xs font-medium transition-colors sm:h-9 ${
-                  selectedTag !== 'Todos' || showTagFilters
-                    ? 'border-[#FAFAFA] bg-[#FAFAFA] font-semibold text-[#09090B]'
-                    : 'border-[#222226] bg-[#09090B] text-zinc-300 hover:border-zinc-700 hover:text-[#FAFAFA]'
-                }`}
+                aria-label="Limpiar búsqueda"
+                className="absolute top-1/2 right-0.5 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded text-zinc-500 hover:text-zinc-200"
               >
-                <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
-                <span className="max-w-[5.5rem] truncate">
-                  {selectedTag !== 'Todos' ? selectedTag : 'Filtros'}
-                </span>
-                {selectedTag !== 'Todos' && (
-                  <span
-                    aria-hidden="true"
-                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#3B82F6]"
-                  />
-                )}
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
-          {/* En Reducido: filtro estado local (Todos / Pendientes / Aprendidos). En OLL/PLL/F2L/Cross: Todos vs 2-Look */}
-          {isReducido && learnedIds ? (
-            <div
-              role="group"
-              aria-label="Filtrar por progreso"
-              className="grid shrink-0 grid-cols-3 rounded-md border border-[#222226] bg-[#09090B] p-0.5 sm:w-auto"
-            >
-              {(
-                [
-                  { id: 'all', label: `Todos (${stageCases.length})` },
-                  {
-                    id: 'pending',
-                    label: `Pend. (${stageCases.length - learnedCount})`,
-                  },
-                  { id: 'learned', label: `Listos (${learnedCount})` },
-                ] as const
-              ).map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('selection');
-                    setLearnedFilter(opt.id);
-                  }}
-                  className={`h-8 rounded px-2 font-mono text-[11px] font-medium tabular-nums transition-colors ${
-                    learnedFilter === opt.id
-                      ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
-                      : 'text-zinc-400 hover:text-zinc-200'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          ) : (
-            twoLookCount > 0 && (
-              <div
-                role="group"
-                aria-label="Modo de catálogo"
-                className="grid shrink-0 grid-cols-2 rounded-md border border-[#222226] bg-[#09090B] p-0.5 sm:w-auto"
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('selection');
+              setShowFilters((prev) => !prev);
+            }}
+            aria-expanded={showFilters}
+            aria-label={
+              activeFilterCount > 0
+                ? `Filtros (${activeFilterCount} activos)`
+                : 'Mostrar filtros de estado y rasgo'
+            }
+            title="Filtrar por estado de dominio y rasgo visual"
+            className={`relative inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border px-2.5 font-mono text-xs font-medium transition-colors ${
+              showFilters || activeFilterCount > 0
+                ? 'border-[#FAFAFA] bg-[#FAFAFA] font-semibold text-[#09090B]'
+                : 'border-[#222226] bg-[#09090B] text-zinc-300 hover:border-zinc-700 hover:text-[#FAFAFA]'
+            }`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline">Filtros</span>
+            {activeFilterCount > 0 && (
+              <span
+                className={`inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 font-mono text-[10px] font-bold leading-none ${
+                  showFilters || activeFilterCount > 0
+                    ? 'bg-[#09090B] text-[#FAFAFA]'
+                    : 'bg-[#3B82F6] text-white'
+                }`}
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('selection');
-                    setScope('full');
-                  }}
-                  className={`h-8 rounded px-3 font-mono text-xs font-medium tabular-nums transition-colors ${
-                    scope === 'full'
-                      ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
-                      : 'text-zinc-400 hover:text-zinc-200'
-                  }`}
-                >
-                  Todos ({stageCases.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('selection');
-                    setScope('2look');
-                  }}
-                  className={`h-8 rounded px-3 font-mono text-xs font-medium tabular-nums transition-colors ${
-                    scope === '2look'
-                      ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
-                      : 'text-zinc-400 hover:text-zinc-200'
-                  }`}
-                >
-                  {meta.twoLookLabel} ({twoLookCount})
-                </button>
-              </div>
-            )
-          )}
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleToggleViewMode}
+            aria-label={
+              viewMode === 'visual'
+                ? 'Cambiar a vista de lista detallada'
+                : 'Cambiar a cuadrícula visual 2D'
+            }
+            title={
+              viewMode === 'visual'
+                ? 'Vista actual: Cuadrícula Visual 2D · Toca para Lista'
+                : 'Vista actual: Lista · Toca para Cuadrícula Visual 2D'
+            }
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-md border border-[#222226] bg-[#09090B] text-zinc-300 transition-colors hover:border-zinc-700 hover:text-[#FAFAFA] sm:w-auto sm:px-2.5"
+          >
+            {viewMode === 'visual' ? (
+              <>
+                <List className="h-4 w-4 shrink-0" />
+                <span className="hidden font-mono text-xs sm:inline">Lista</span>
+              </>
+            ) : (
+              <>
+                <LayoutGrid className="h-4 w-4 shrink-0" />
+                <span className="hidden font-mono text-xs sm:inline">Visual</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            disabled={filteredCases.length === 0}
+            onClick={() => {
+              triggerHaptic('medium');
+              onStartPractice(filteredCases, practiceLabel);
+            }}
+            title={`Entrenar ${filteredCases.length} casos filtrados (Active Recall)`}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-[#10B981]/50 bg-[#10B981]/15 px-2.5 font-mono text-xs font-semibold text-[#10B981] transition-colors hover:bg-[#10B981]/25 active:bg-[#10B981]/30 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Brain className="h-3.5 w-3.5 shrink-0" />
+            <span>Practicar</span>
+          </button>
         </div>
 
-        {/* Fila 1: Subcategorías oficiales con contador */}
-        <div className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+        {/* Fila 2: Riel único horizontal con 2-Look rápido + Subcategorías oficiales */}
+        <div className="no-scrollbar -mx-4 flex items-center gap-1 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+          {twoLookCount > 0 && !isReducido && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('selection');
+                  setScope((prev) => (prev === '2look' ? 'full' : '2look'));
+                }}
+                aria-pressed={scope === '2look'}
+                className={`inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2 font-mono text-[11px] font-medium transition-colors ${
+                  scope === '2look'
+                    ? 'border-[#FAFAFA] bg-[#FAFAFA] font-semibold text-[#09090B]'
+                    : 'border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-zinc-500'
+                }`}
+              >
+                <span>{meta.twoLookLabel}</span>
+                <span
+                  className={`text-[10px] tabular-nums ${
+                    scope === '2look' ? 'text-zinc-800' : 'text-zinc-400'
+                  }`}
+                >
+                  {twoLookCount}
+                </span>
+              </button>
+              <span
+                aria-hidden="true"
+                className="mx-0.5 h-4 w-px shrink-0 bg-zinc-800"
+              />
+            </>
+          )}
+
           {subcategories.map((sub) => {
             const isActive = selectedSubcategory === sub;
             const count = subcategoryCounts[sub] ?? 0;
@@ -533,7 +634,7 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
                   triggerHaptic('selection');
                   setSelectedSubcategory(sub);
                 }}
-                className={`inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 text-xs font-medium transition-colors ${
+                className={`inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2 text-xs font-medium transition-colors ${
                   isActive
                     ? 'border-[#FAFAFA] bg-[#FAFAFA] text-[#09090B]'
                     : 'border-[#222226] bg-[#09090B] text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
@@ -552,51 +653,111 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
           })}
         </div>
 
-        {/* Fila 2 colapsable: Reconocimiento visual rápido por características */}
-        {availableTags.length > 0 && !isReducido && showTagFilters && (
-          <div className="no-scrollbar -mx-4 flex items-center gap-1 overflow-x-auto border-t border-[#222226]/60 px-4 pt-1.5 sm:mx-0 sm:flex-wrap sm:px-0">
-            <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-zinc-600">
-              RASGO:
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('selection');
-                setSelectedTag('Todos');
-              }}
-              className={`h-6 shrink-0 rounded px-2 font-mono text-[11px] transition-colors ${
-                selectedTag === 'Todos'
-                  ? 'bg-zinc-800 text-[#FAFAFA]'
-                  : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              Todos
-            </button>
-            {availableTags.map((tag) => {
-              const isActive = selectedTag === tag;
-              return (
+        {/* Panel colapsable: Estado de dominio + Rasgos visuales */}
+        {showFilters && (
+          <div className="space-y-1.5 border-t border-[#222226]/70 pt-1.5">
+            <div className="no-scrollbar -mx-4 flex items-center gap-1 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+              <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                ESTADO:
+              </span>
+              {(
+                [
+                  {
+                    id: 'all',
+                    label: 'Todos',
+                    count: stageCases.length,
+                    activeClass: 'bg-zinc-200 text-[#09090B] font-semibold',
+                  },
+                  {
+                    id: 'unlearned',
+                    label: 'Por aprender',
+                    count: masteryCounts.unlearned,
+                    activeClass: 'bg-zinc-700 text-[#FAFAFA] font-semibold',
+                  },
+                  {
+                    id: 'practicing',
+                    label: 'Practicando',
+                    count: masteryCounts.practicing,
+                    activeClass:
+                      'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/50 font-semibold',
+                  },
+                  {
+                    id: 'mastered',
+                    label: 'Dominados',
+                    count: masteryCounts.mastered,
+                    activeClass:
+                      'bg-[#10B981]/20 text-[#10B981] ring-1 ring-[#10B981]/50 font-semibold',
+                  },
+                ] as const
+              ).map((opt) => {
+                const isActive = masteryFilter === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('selection');
+                      setMasteryFilter(opt.id);
+                    }}
+                    className={`inline-flex h-6 shrink-0 items-center gap-1 rounded px-2 font-mono text-[11px] tabular-nums transition-colors ${
+                      isActive
+                        ? opt.activeClass
+                        : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
+                    }`}
+                  >
+                    <span>{opt.label}</span>
+                    <span className="opacity-70">{opt.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {availableTags.length > 0 && !isReducido && (
+              <div className="no-scrollbar -mx-4 flex items-center gap-1 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+                <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                  RASGO:
+                </span>
                 <button
-                  key={tag}
                   type="button"
                   onClick={() => {
                     triggerHaptic('selection');
-                    setSelectedTag(tag);
+                    setSelectedTag('Todos');
                   }}
                   className={`h-6 shrink-0 rounded px-2 font-mono text-[11px] transition-colors ${
-                    isActive
+                    selectedTag === 'Todos'
                       ? 'bg-zinc-800 font-semibold text-[#FAFAFA]'
                       : 'text-zinc-500 hover:text-zinc-300'
                   }`}
                 >
-                  {tag}
+                  Todos
                 </button>
-              );
-            })}
+                {availableTags.map((tag) => {
+                  const isActive = selectedTag === tag;
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('selection');
+                        setSelectedTag(tag);
+                      }}
+                      className={`h-6 shrink-0 rounded px-2 font-mono text-[11px] transition-colors ${
+                        isActive
+                          ? 'bg-zinc-800 font-semibold text-[#FAFAFA]'
+                          : 'text-zinc-500 hover:text-zinc-300'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Lista de casos */}
+      {/* Catálogo: Vacío / Cuadrícula Visual 2D / Lista Detallada */}
       {filteredCases.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-[#222226] bg-[#111113] px-6 py-10 text-center">
           <p className="text-sm text-zinc-300">
@@ -607,7 +768,7 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
             onClick={() => {
               triggerHaptic('selection');
               setScope('full');
-              setLearnedFilter('all');
+              setMasteryFilter('all');
               setSelectedSubcategory('Todos');
               setSelectedTag('Todos');
               setSearchQuery('');
@@ -617,7 +778,94 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
             Ver todos los casos ({stageCases.length})
           </button>
         </div>
+      ) : viewMode === 'visual' ? (
+        /* MODO CUADRÍCULA VISUAL 2D: 9–12 patrones escaneables en 1 pantalla móvil */
+        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredCases.map((item) => {
+            const isSelected = item.id === selectedCaseId;
+            const displayAlg = isLeftyGlobal
+              ? mirrorAlgLR(item.alg)
+              : item.alg;
+            const moveCount = countAlgMoves(displayAlg);
+            const twoLook = isTwoLookCase(item);
+            const mastery = getMastery(item.id);
+            const previewStage = getPreviewStage(item);
+
+            const tileBorderClass = isSelected
+              ? 'border-[#FAFAFA] bg-[#16161A]'
+              : mastery === 'mastered'
+              ? 'border-[#10B981]/45 bg-[#111113] hover:border-[#10B981]/75'
+              : mastery === 'practicing'
+              ? 'border-amber-500/45 bg-[#111113] hover:border-amber-500/75'
+              : 'border-[#222226] bg-[#111113] hover:border-zinc-700 hover:bg-[#16161A]';
+
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    onSelectCase(item);
+                  }}
+                  aria-pressed={isSelected}
+                  className={`flex w-full flex-col gap-1.5 rounded-lg border p-1.5 text-left transition-colors active:bg-[#1C1C21] ${tileBorderClass}`}
+                >
+                  {/* Meta superior fuera de los stickers */}
+                  <div className="flex w-full items-center justify-between gap-1 px-0.5">
+                    <span
+                      translate="no"
+                      className={`truncate font-mono text-[10px] font-semibold tabular-nums leading-none ${meta.codeColor}`}
+                    >
+                      {item.code}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {twoLook && !isReducido && (
+                        <span className="rounded bg-zinc-800 px-1 font-mono text-[8px] font-semibold leading-[14px] text-zinc-300">
+                          2L
+                        </span>
+                      )}
+                      {mastery !== 'unlearned' && (
+                        <span
+                          aria-label={
+                            mastery === 'mastered' ? 'Dominado' : 'Practicando'
+                          }
+                          className={`h-2 w-2 rounded-full ${
+                            mastery === 'mastered'
+                              ? 'bg-[#10B981]'
+                              : 'bg-amber-400'
+                          }`}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Diagrama 2D 100% visible */}
+                  <Cube2DPreview
+                    alg={displayAlg}
+                    stage={previewStage}
+                    topFace={topFace}
+                    fluid
+                  />
+
+                  {/* Nombre corto + HTM */}
+                  <div className="flex w-full items-center justify-between gap-1 px-0.5">
+                    <span className="truncate text-[10px] leading-tight text-zinc-400">
+                      {item.name}
+                    </span>
+                    <span
+                      translate="no"
+                      className="shrink-0 font-mono text-[9px] tabular-nums text-zinc-600"
+                    >
+                      {moveCount}
+                    </span>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       ) : (
+        /* MODO LISTA DETALLADA: algoritmo chunked + acciones 1-tap (Copiar y Dominio) */
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
           {filteredCases.map((item) => {
             const isSelected = item.id === selectedCaseId;
@@ -627,8 +875,31 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
             const moveCount = countAlgMoves(displayAlg);
             const twoLook = isTwoLookCase(item);
             const altCount = item.altAlgs.length;
-            const isDone = Boolean(isReducido && learnedIds?.has(item.id));
+            const mastery = getMastery(item.id);
             const previewStage = getPreviewStage(item);
+            const isCopied = copiedCaseId === item.id;
+
+            const cardBorderClass = isSelected
+              ? 'border-[#FAFAFA] bg-[#16161A]'
+              : mastery === 'mastered'
+              ? 'border-[#10B981]/35 bg-[#111113] hover:border-[#10B981]/60 hover:bg-[#16161A]'
+              : mastery === 'practicing'
+              ? 'border-amber-500/35 bg-[#111113] hover:border-amber-500/60 hover:bg-[#16161A]'
+              : 'border-[#222226] bg-[#111113] hover:border-zinc-700 hover:bg-[#16161A]';
+
+            const masteryBtnClass =
+              mastery === 'mastered'
+                ? 'border-[#10B981]/50 bg-[#10B981]/15 text-[#10B981]'
+                : mastery === 'practicing'
+                ? 'border-amber-500/50 bg-amber-500/15 text-amber-400'
+                : 'border-[#222226] bg-[#09090B] text-zinc-500 hover:border-zinc-700 hover:text-zinc-300';
+
+            const masteryLabel =
+              mastery === 'mastered'
+                ? 'Dominado'
+                : mastery === 'practicing'
+                ? 'Practicando'
+                : 'Por aprender';
 
             return (
               <li key={item.id}>
@@ -647,13 +918,7 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
                     }
                   }}
                   aria-pressed={isSelected}
-                  className={`flex w-full cursor-pointer items-start gap-3 rounded-lg border p-2.5 text-left transition-colors active:bg-[#1C1C21] sm:p-3 ${
-                    isSelected
-                      ? 'border-[#FAFAFA] bg-[#16161A]'
-                      : isDone
-                      ? 'border-[#10B981]/35 bg-[#111113] hover:border-[#10B981]/60 hover:bg-[#16161A]'
-                      : 'border-[#222226] bg-[#111113] hover:border-zinc-700 hover:bg-[#16161A]'
-                  }`}
+                  className={`flex w-full cursor-pointer items-start gap-3 rounded-lg border p-2.5 text-left transition-colors active:bg-[#1C1C21] sm:p-3 ${cardBorderClass}`}
                 >
                   <Cube2DPreview
                     alg={displayAlg}
@@ -700,7 +965,7 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
                         )}
                       </div>
 
-                      <div className="flex shrink-0 items-center gap-1.5">
+                      <div className="flex shrink-0 items-center gap-1">
                         {item.videoTimestamp && item.videoUrl && (
                           <a
                             href={item.videoUrl}
@@ -708,48 +973,44 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
                             title={`Ver en YouTube (${item.videoTimestamp})`}
-                            className="inline-flex items-center gap-0.5 rounded border border-[#222226] bg-[#09090B] px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-zinc-400 transition-colors hover:border-[#10B981]/50 hover:text-[#10B981]"
+                            className="inline-flex h-7 items-center gap-0.5 rounded border border-[#222226] bg-[#09090B] px-1.5 font-mono text-[10px] tabular-nums text-zinc-400 transition-colors hover:border-[#10B981]/50 hover:text-[#10B981]"
                           >
                             <span>▶ {item.videoTimestamp}</span>
                           </a>
                         )}
 
-                        {!isReducido && (
-                          <span
-                            translate="no"
-                            className="font-mono text-[11px] tabular-nums text-zinc-500"
-                          >
-                            {moveCount} HTM
-                          </span>
-                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => handleQuickCopy(e, item.id, displayAlg)}
+                          aria-label={`Copiar algoritmo de ${item.name}`}
+                          title="Copiar algoritmo"
+                          className="flex h-7 w-7 items-center justify-center rounded-md border border-[#222226] bg-[#09090B] text-zinc-500 transition-colors hover:border-zinc-700 hover:text-zinc-200"
+                        >
+                          {isCopied ? (
+                            <Check className="h-3.5 w-3.5 text-[#10B981]" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                        </button>
 
-                        {isReducido && onToggleLearned && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              triggerHaptic('success');
-                              onToggleLearned(item.id);
-                            }}
-                            aria-label={
-                              isDone
-                                ? `Desmarcar ${item.name} como aprendido`
-                                : `Marcar ${item.name} como aprendido`
-                            }
-                            aria-pressed={isDone}
-                            className={`flex h-7 w-7 items-center justify-center rounded-md border transition-colors ${
-                              isDone
-                                ? 'border-[#10B981]/50 bg-[#10B981]/15 text-[#10B981]'
-                                : 'border-[#222226] bg-[#09090B] text-zinc-500 hover:border-zinc-700 hover:text-zinc-300'
-                            }`}
-                          >
-                            {isDone ? (
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                            ) : (
-                              <Circle className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCycleMastery(item.id);
+                          }}
+                          aria-label={`${item.name}: ${masteryLabel}. Toca para cambiar estado`}
+                          title={`Estado: ${masteryLabel} · Toca para cambiar`}
+                          className={`flex h-7 w-7 items-center justify-center rounded-md border transition-colors ${masteryBtnClass}`}
+                        >
+                          {mastery === 'mastered' ? (
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          ) : mastery === 'practicing' ? (
+                            <Flame className="h-3.5 w-3.5" />
+                          ) : (
+                            <Circle className="h-3.5 w-3.5" />
+                          )}
+                        </button>
                       </div>
                     </div>
 
@@ -757,18 +1018,16 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
                       {item.name}
                     </h3>
 
-                    <p className="mt-0.5 flex items-center gap-2 truncate text-[11px] text-zinc-500">
+                    <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-zinc-500">
                       <span className="truncate">
                         {item.guideNote ?? item.subcategory}
                       </span>
-                      {isReducido && (
-                        <span
-                          translate="no"
-                          className="shrink-0 font-mono text-[10px] tabular-nums text-zinc-600"
-                        >
-                          · {moveCount} HTM
-                        </span>
-                      )}
+                      <span
+                        translate="no"
+                        className="shrink-0 font-mono text-[10px] tabular-nums text-zinc-600"
+                      >
+                        · {moveCount} HTM
+                      </span>
                     </p>
 
                     <div className="mt-1.5">

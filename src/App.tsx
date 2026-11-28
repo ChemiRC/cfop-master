@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BookOpen, ChevronUp, Layers, Timer, X, Zap } from 'lucide-react';
+import { BookOpen, Layers, Play, Timer, X, Zap } from 'lucide-react';
 import {
   CFOP_CASES,
   CFOP_REDUCIDO_CASES,
@@ -9,9 +9,14 @@ import {
 } from './data/cfopData';
 import { CfopCatalogModule } from './components/CfopCatalogModule';
 import { Cube2DPreview } from './components/Cube2DPreview';
-import { CubeViewer } from './components/CubeViewer';
+import {
+  CubeViewer,
+  type CubeViewerNavigation,
+} from './components/CubeViewer';
 import { NotationModule } from './components/NotationModule';
+import { PracticeTrainerModal } from './components/PracticeTrainerModal';
 import { TimerModule } from './components/TimerModule';
+import { useCaseMastery } from './hooks/useCaseMastery';
 import type {
   ActiveSelection,
   CfopCase,
@@ -27,7 +32,6 @@ import { triggerHaptic } from './utils/haptics';
 
 const DESKTOP_QUERY = '(min-width: 1024px)';
 const SWIPE_CLOSE_THRESHOLD = 90;
-const REDUCIDO_LEARNED_STORAGE_KEY = 'cfop_reducido_learned';
 
 function resolveVisualStage(c: CfopCase): VisualStage {
   if (c.visualStage) return c.visualStage;
@@ -78,6 +82,26 @@ function moveToSelection(m: NotationMove, nonce: number): ActiveSelection {
     setupAnchor: 'start',
     recognition: m.description,
     explanation: m.fingertrickTip,
+    tags: [],
+    autoPlayNonce: nonce,
+  };
+}
+
+function triggerToSelection(trig: TriggerDemo, nonce: number): ActiveSelection {
+  return {
+    id: trig.id,
+    code: 'TRIGGER',
+    title: trig.name,
+    subtitle: 'Secuencia base',
+    alg: trig.alg,
+    altAlgs: [],
+    twoLook: false,
+    stage: 'Notation',
+    stickering: 'full',
+    setupAnchor: 'end',
+    recognition: trig.description,
+    explanation:
+      'Practícalo a 0.5x y sube la velocidad cuando salga sin pausas.',
     tags: [],
     autoPlayNonce: nonce,
   };
@@ -172,47 +196,16 @@ export const App: React.FC = () => {
     return false;
   });
 
-  // Progreso local de CFOP Reducido persistido en localStorage
-  const [reducidoLearnedIds, setReducidoLearnedIds] = useState<Set<string>>(
-    () => {
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          const raw = window.localStorage.getItem(REDUCIDO_LEARNED_STORAGE_KEY);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              return new Set(
-                parsed.filter((item): item is string => typeof item === 'string')
-              );
-            }
-          }
-        }
-      } catch {
-        // Ignore corrupted storage
-      }
-      return new Set();
-    }
+  const [filteredCatalogCases, setFilteredCatalogCases] = useState<CfopCase[]>(
+    () => CFOP_CASES.filter((c) => c.stage === 'F2L')
   );
+  const [practiceSession, setPracticeSession] = useState<{
+    cases: CfopCase[];
+    label: string;
+  } | null>(null);
 
-  const toggleReducidoLearned = useCallback((caseId: string) => {
-    setReducidoLearnedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(caseId)) {
-        next.delete(caseId);
-      } else {
-        next.add(caseId);
-      }
-      try {
-        window.localStorage.setItem(
-          REDUCIDO_LEARNED_STORAGE_KEY,
-          JSON.stringify(Array.from(next))
-        );
-      } catch {
-        // Ignore storage errors
-      }
-      return next;
-    });
-  }, []);
+  // Sistema universal de dominio (Nuevo / Practicando / Dominado) para los 142 casos
+  const { getMastery, setMastery, cycleMastery } = useCaseMastery();
 
   const toggleLeftyMode = useCallback(() => {
     setIsLeftyMode((prev) => {
@@ -303,23 +296,7 @@ export const App: React.FC = () => {
   const handleSelectTrigger = useCallback(
     (trig: TriggerDemo) => {
       triggerHaptic('light');
-      setSelection({
-        id: trig.id,
-        code: 'TRIGGER',
-        title: trig.name,
-        subtitle: 'Secuencia base',
-        alg: trig.alg,
-        altAlgs: [],
-        twoLook: false,
-        stage: 'Notation',
-        stickering: 'full',
-        setupAnchor: 'end',
-        recognition: trig.description,
-        explanation:
-          'Practícalo a 0.5x y sube la velocidad cuando salga sin pausas.',
-        tags: [],
-        autoPlayNonce: Date.now(),
-      });
+      setSelection(triggerToSelection(trig, Date.now()));
       openSheetOnMobile();
     },
     [openSheetOnMobile]
@@ -332,6 +309,27 @@ export const App: React.FC = () => {
         lastCfopCaseIdsRef.current[cfopCase.stage] = cfopCase.id;
       }
       setSelection(caseToSelection(cfopCase));
+      openSheetOnMobile();
+    },
+    [openSheetOnMobile]
+  );
+
+  const handleStartPractice = useCallback(
+    (cases: CfopCase[], label: string) => {
+      if (cases.length === 0) return;
+      setIsSheetOpen(false);
+      setPracticeSession({ cases, label });
+    },
+    []
+  );
+
+  const handleOpenPracticeCaseIn3D = useCallback(
+    (cfopCase: CfopCase) => {
+      setPracticeSession(null);
+      if (cfopCase.stage !== 'Reducido') {
+        lastCfopCaseIdsRef.current[cfopCase.stage] = cfopCase.id;
+      }
+      setSelection(caseToSelection(cfopCase, Date.now()));
       openSheetOnMobile();
     },
     [openSheetOnMobile]
@@ -408,7 +406,94 @@ export const App: React.FC = () => {
     ? mirrorAlgLR(selection.alg)
     : selection.alg;
 
-  const isSelectionReducido = selection.stage === 'Reducido';
+  const isSelectionLearningCase =
+    selection.stage !== 'Notation' && selection.stage !== 'Timer';
+
+  const notationDeck = useMemo(
+    () => [
+      ...NOTATION_MOVES.map((m) => ({
+        kind: 'move' as const,
+        id: m.id,
+        label: m.move,
+        item: m,
+      })),
+      ...FUNDAMENTAL_TRIGGERS.map((t) => ({
+        kind: 'trigger' as const,
+        id: t.id,
+        label: t.name,
+        item: t,
+      })),
+    ],
+    []
+  );
+
+  const viewerNavigation = useMemo<CubeViewerNavigation | undefined>(() => {
+    if (isTimerTab) return undefined;
+
+    if (activeSection === 'Notation') {
+      const total = notationDeck.length;
+      if (total <= 1) return undefined;
+      const rawIdx = notationDeck.findIndex((entry) => entry.id === selection.id);
+      const currentIndex = rawIdx >= 0 ? rawIdx : 0;
+      const prevEntry = notationDeck[(currentIndex - 1 + total) % total];
+      const nextEntry = notationDeck[(currentIndex + 1) % total];
+
+      const selectNotationEntry = (entry: (typeof notationDeck)[number]) => {
+        triggerHaptic('selection');
+        if (entry.kind === 'move') {
+          setSelection(moveToSelection(entry.item, Date.now()));
+        } else {
+          setSelection(triggerToSelection(entry.item, Date.now()));
+        }
+      };
+
+      return {
+        currentIndex,
+        total,
+        prevLabel: prevEntry.label,
+        nextLabel: nextEntry.label,
+        onPrev: () => selectNotationEntry(prevEntry),
+        onNext: () => selectNotationEntry(nextEntry),
+      };
+    }
+
+    const deckCases =
+      filteredCatalogCases.length > 0 &&
+      filteredCatalogCases[0]?.stage === activeCatalogStage
+        ? filteredCatalogCases
+        : CFOP_CASES.filter((c) => c.stage === activeCatalogStage);
+    const total = deckCases.length;
+    if (total <= 1) return undefined;
+
+    const rawIdx = deckCases.findIndex((c) => c.id === selection.id);
+    const currentIndex = rawIdx >= 0 ? rawIdx : 0;
+    const prevCase = deckCases[(currentIndex - 1 + total) % total];
+    const nextCase = deckCases[(currentIndex + 1) % total];
+
+    const selectDeckCase = (target: CfopCase) => {
+      triggerHaptic('selection');
+      if (target.stage !== 'Reducido') {
+        lastCfopCaseIdsRef.current[target.stage] = target.id;
+      }
+      setSelection(caseToSelection(target));
+    };
+
+    return {
+      currentIndex,
+      total,
+      prevLabel: prevCase.code,
+      nextLabel: nextCase.code,
+      onPrev: () => selectDeckCase(prevCase),
+      onNext: () => selectDeckCase(nextCase),
+    };
+  }, [
+    activeCatalogStage,
+    activeSection,
+    filteredCatalogCases,
+    isTimerTab,
+    notationDeck,
+    selection.id,
+  ]);
 
   const renderMainNavIcon = (
     id: MainSection,
@@ -552,7 +637,7 @@ export const App: React.FC = () => {
       <main
         className={
           isTimerTab
-            ? 'flex w-full flex-1 flex-col pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-0'
+            ? 'flex w-full flex-1 flex-col pb-[calc(4.625rem+env(safe-area-inset-bottom))] lg:pb-0'
             : 'px-safe pb-dock mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-5 pt-4 sm:px-6 sm:pt-5 lg:grid-cols-12 lg:items-start lg:gap-6'
         }
       >
@@ -615,16 +700,10 @@ export const App: React.FC = () => {
                   onSelectCase={handleSelectCase}
                   isLeftyGlobal={isLeftyMode}
                   topFace={topFace}
-                  learnedIds={
-                    activeCatalogStage === 'Reducido'
-                      ? reducidoLearnedIds
-                      : undefined
-                  }
-                  onToggleLearned={
-                    activeCatalogStage === 'Reducido'
-                      ? toggleReducidoLearned
-                      : undefined
-                  }
+                  getMastery={getMastery}
+                  onCycleMastery={cycleMastery}
+                  onStartPractice={handleStartPractice}
+                  onFilteredCasesChange={setFilteredCatalogCases}
                 />
               </>
             )}
@@ -686,17 +765,16 @@ export const App: React.FC = () => {
             <CubeViewer
               selection={selection}
               isLeftyGlobal={isLeftyMode}
-              shortcutsEnabled={!isTimerTab}
+              shortcutsEnabled={!isTimerTab && practiceSession === null}
               topFace={topFace}
               onToggleTopFace={toggleTopFace}
-              isLearned={
-                isSelectionReducido
-                  ? reducidoLearnedIds.has(selection.id)
-                  : undefined
+              navigation={viewerNavigation}
+              mastery={
+                isSelectionLearningCase ? getMastery(selection.id) : undefined
               }
-              onToggleLearned={
-                isSelectionReducido
-                  ? () => toggleReducidoLearned(selection.id)
+              onCycleMastery={
+                isSelectionLearningCase
+                  ? () => cycleMastery(selection.id)
                   : undefined
               }
             />
@@ -715,25 +793,25 @@ export const App: React.FC = () => {
         </footer>
       )}
 
-      {/* Sticky Bottom Dock móvil (Zona del Pulgar) */}
-      <div className="pb-safe-2 fixed inset-x-0 bottom-0 z-30 border-t border-zinc-800/80 bg-[#09090B]/95 px-2.5 pt-2 backdrop-blur-md lg:hidden">
+      {/* Sticky Bottom Dock móvil (Zona del Pulgar optimizada, sin controles duplicados) */}
+      <div className="pb-safe-2 fixed inset-x-0 bottom-0 z-30 border-t border-zinc-800/80 bg-[#09090B]/95 px-2.5 pt-1.5 backdrop-blur-md lg:hidden">
         {!isTimerTab && (
-          <div className="mb-2 flex items-center gap-2">
+          <div className="mb-1.5 flex h-12 items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/90 p-1.5">
             <button
               type="button"
               onClick={() => {
                 triggerHaptic('light');
                 setIsSheetOpen(true);
               }}
-              className="flex h-14 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-zinc-800 bg-zinc-900/90 p-1.5 text-left active:bg-zinc-800"
+              aria-label={`Abrir visor 3D de ${selection.code} ${selection.title}`}
+              className="flex min-w-0 flex-1 items-center gap-2 text-left active:opacity-80"
             >
-              <div className="[&>div]:h-10 [&>div]:w-10 [&>div]:p-0.5">
-                <Cube2DPreview
-                  alg={dockDisplayAlg}
-                  stage={dockPreviewStage}
-                  topFace={topFace}
-                />
-              </div>
+              <Cube2DPreview
+                alg={dockDisplayAlg}
+                stage={dockPreviewStage}
+                topFace={topFace}
+                className="h-9 w-9 p-0.5"
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-1.5">
                   <span
@@ -753,24 +831,23 @@ export const App: React.FC = () => {
                   {dockDisplayAlg}
                 </p>
               </div>
-              <span className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg bg-[#FAFAFA] px-2.5 font-mono text-xs font-semibold text-[#09090B]">
-                3D
-                <ChevronUp className="h-3.5 w-3.5" />
-              </span>
             </button>
 
             <button
               type="button"
-              onClick={toggleLeftyMode}
-              title={isLeftyMode ? 'Modo Zurdo activo' : 'Activar Modo Zurdo'}
-              className={`flex h-14 w-11 shrink-0 flex-col items-center justify-center rounded-xl border font-mono text-[10px] font-medium transition-colors ${
-                isLeftyMode
-                  ? 'border-[#3B82F6] bg-[#3B82F6]/15 text-[#3B82F6]'
-                  : 'border-zinc-800 bg-zinc-900 text-zinc-300'
-              }`}
+              onClick={() => {
+                triggerHaptic('medium');
+                setSelection((prev) => ({
+                  ...prev,
+                  autoPlayNonce: Date.now(),
+                }));
+                setIsSheetOpen(true);
+              }}
+              aria-label="Abrir y reproducir en 3D"
+              className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg bg-[#FAFAFA] px-2.5 font-mono text-xs font-semibold text-[#09090B] active:bg-zinc-200"
             >
-              <span>L↔R</span>
-              <span className="text-[9px]">{isLeftyMode ? 'Z' : 'D'}</span>
+              <Play className="h-3 w-3 fill-current" />
+              <span>3D</span>
             </button>
           </div>
         )}
@@ -803,6 +880,20 @@ export const App: React.FC = () => {
           })}
         </nav>
       </div>
+
+      {/* Entrenador Active Recall en 1 toque */}
+      {practiceSession && (
+        <PracticeTrainerModal
+          cases={practiceSession.cases}
+          stageLabel={practiceSession.label}
+          isLeftyGlobal={isLeftyMode}
+          topFace={topFace}
+          getMastery={getMastery}
+          onSetMastery={setMastery}
+          onOpenIn3D={handleOpenPracticeCaseIn3D}
+          onClose={() => setPracticeSession(null)}
+        />
+      )}
     </div>
   );
 };

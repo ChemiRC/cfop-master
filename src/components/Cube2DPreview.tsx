@@ -10,6 +10,10 @@ interface Cube2DPreviewProps {
   alg: string;
   stage: VisualStage;
   topFace?: TopFaceColor;
+  /** Cuando es true, el contenedor llena el ancho disponible en relación 1:1 (ideal para Cuadrícula Visual) */
+  fluid?: boolean;
+  /** Clases opcionales para personalizar tamaño/espaciado del contenedor */
+  className?: string;
 }
 
 function quadPoints(
@@ -33,7 +37,7 @@ function quadPoints(
  * - F2L / Cross: Proyección isométrica 3D con énfasis en el par activo (FR).
  */
 export const Cube2DPreview: React.FC<Cube2DPreviewProps> = React.memo(
-  ({ alg, stage, topFace = 'yellow' }) => {
+  ({ alg, stage, topFace = 'yellow', fluid = false, className }) => {
     const markerUid = useId().replace(/:/g, '');
     const sim = useMemo(
       () => simulateCasePreState(alg, stage, topFace),
@@ -41,6 +45,11 @@ export const Cube2DPreview: React.FC<Cube2DPreviewProps> = React.memo(
     );
     const isLastLayer = stage === 'OLL' || stage === 'PLL';
     const topPrimaryColor = topFace === 'yellow' ? '#EAB308' : '#FAFAFA';
+    const boxClassName = className
+      ? `flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#222226] bg-[#09090B] ${className}`
+      : fluid
+      ? 'flex aspect-square w-full items-center justify-center overflow-hidden rounded-md border border-[#222226] bg-[#09090B] p-1'
+      : 'flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#222226] bg-[#09090B] p-1 sm:h-20 sm:w-20';
 
     if (isLastLayer) {
       const cellSize = 18;
@@ -128,10 +137,7 @@ export const Cube2DPreview: React.FC<Cube2DPreviewProps> = React.memo(
       };
 
       return (
-        <div
-          aria-hidden="true"
-          className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#222226] bg-[#09090B] p-1 sm:h-20 sm:w-20"
-        >
+        <div aria-hidden="true" className={boxClassName}>
           <svg
             viewBox="0 0 98 98"
             className="h-full w-full select-none"
@@ -275,10 +281,7 @@ export const Cube2DPreview: React.FC<Cube2DPreviewProps> = React.memo(
     ];
 
     return (
-      <div
-        aria-hidden="true"
-        className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#222226] bg-[#09090B] p-1 sm:h-20 sm:w-20"
-      >
+      <div aria-hidden="true" className={boxClassName}>
         <svg
           viewBox="0 0 100 100"
           className="h-full w-full select-none"

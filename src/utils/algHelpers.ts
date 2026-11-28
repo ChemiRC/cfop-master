@@ -200,3 +200,21 @@ export function mirrorAlgLR(alg: string): string {
     })
     .join(' ');
 }
+
+/**
+ * Calcula el inverso exacto WCA de un algoritmo (para hacer Setup desde un cubo resuelto).
+ * Invierte el orden de los giros y cambia el sentido de giros simples ('' <-> "'"), conservando '2'.
+ */
+export function invertAlg(alg: string): string {
+  const tokens = splitAlgMoves(alg);
+  return [...tokens]
+    .reverse()
+    .map((token) => {
+      const match = token.match(/^([RLUDFBrludfbMESxyz])(2|')?$/);
+      if (!match) return token;
+      const [, base, mod = ''] = match;
+      if (mod === '2') return `${base}2`;
+      return mod === "'" ? base : `${base}'`;
+    })
+    .join(' ');
+}
