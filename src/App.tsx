@@ -1,5 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BookOpen, Layers, Play, Timer, X, Zap } from 'lucide-react';
+import {
+  BookOpen,
+  Layers,
+  PanelLeft,
+  PanelRight,
+  Play,
+  Timer,
+  X,
+  Zap,
+} from 'lucide-react';
 import {
   CFOP_CASES,
   CFOP_REDUCIDO_CASES,
@@ -25,6 +34,7 @@ import type {
   MainSection,
   NotationMove,
   TopFaceColor,
+  ViewerSide,
   VisualStage,
 } from './types/cfop';
 import { mirrorAlgLR } from './utils/algHelpers';
@@ -32,6 +42,7 @@ import { triggerHaptic } from './utils/haptics';
 
 const DESKTOP_QUERY = '(min-width: 1024px)';
 const SWIPE_CLOSE_THRESHOLD = 90;
+const VIEWER_SIDE_STORAGE_KEY = 'cfop_viewer_side';
 
 function resolveVisualStage(c: CfopCase): VisualStage {
   if (c.visualStage) return c.visualStage;
@@ -183,6 +194,41 @@ export const App: React.FC = () => {
   const [dragOffset, setDragOffset] = useState<number>(0);
   const dragStartY = useRef<number | null>(null);
   const lastCfopCaseIdsRef = useRef<Partial<Record<CfopSubStage, string>>>({});
+  const catalogPaneRef = useRef<HTMLDivElement | null>(null);
+
+  // Lado del Visor 3D en escritorio (persistente: derecha por defecto o izquierda)
+  const [viewerSide, setViewerSide] = useState<ViewerSide>(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = window.localStorage.getItem(VIEWER_SIDE_STORAGE_KEY);
+        if (saved === 'left' || saved === 'right') return saved;
+      }
+    } catch {
+      // Ignore
+    }
+    return 'right';
+  });
+
+  const toggleViewerSide = useCallback(() => {
+    setViewerSide((prev) => {
+      const next: ViewerSide = prev === 'right' ? 'left' : 'right';
+      try {
+        window.localStorage.setItem(VIEWER_SIDE_STORAGE_KEY, next);
+      } catch {
+        // Ignore
+      }
+      triggerHaptic('selection');
+      return next;
+    });
+  }, []);
+
+  const scrollCatalogTop = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    if (isDesktop() && catalogPaneRef.current) {
+      catalogPaneRef.current.scrollTo({ top: 0, behavior });
+    } else {
+      window.scrollTo({ top: 0, behavior });
+    }
+  }, []);
 
   // Modo Zurdo Global persistente
   const [isLeftyMode, setIsLeftyMode] = useState<boolean>(() => {
@@ -242,10 +288,7 @@ export const App: React.FC = () => {
       triggerHaptic('selection');
       setActiveSection(section);
       setIsSheetOpen(false);
-      window.scrollTo({
-        top: 0,
-        behavior: section === 'Timer' ? 'auto' : 'smooth',
-      });
+      scrollCatalogTop(section === 'Timer' ? 'auto' : 'smooth');
 
       if (section === 'Timer') return;
       if (section === 'Notation') {
@@ -270,19 +313,23 @@ export const App: React.FC = () => {
         setSelection(caseToSelection(targetCase));
       }
     },
-    [activeCfopStage]
+    [activeCfopStage, scrollCatalogTop]
   );
 
-  const handleCfopStageChange = useCallback((stage: CfopSubStage) => {
-    triggerHaptic('selection');
-    setActiveCfopStage(stage);
-    setIsSheetOpen(false);
-    const firstStageCase = CFOP_CASES.find((c) => c.stage === stage);
-    if (firstStageCase) {
-      lastCfopCaseIdsRef.current[stage] = firstStageCase.id;
-      setSelection(caseToSelection(firstStageCase));
-    }
-  }, []);
+  const handleCfopStageChange = useCallback(
+    (stage: CfopSubStage) => {
+      triggerHaptic('selection');
+      setActiveCfopStage(stage);
+      setIsSheetOpen(false);
+      scrollCatalogTop('smooth');
+      const firstStageCase = CFOP_CASES.find((c) => c.stage === stage);
+      if (firstStageCase) {
+        lastCfopCaseIdsRef.current[stage] = firstStageCase.id;
+        setSelection(caseToSelection(firstStageCase));
+      }
+    },
+    [scrollCatalogTop]
+  );
 
   const handleSelectMove = useCallback(
     (move: NotationMove) => {
@@ -543,7 +590,7 @@ export const App: React.FC = () => {
         <div className="px-safe mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 sm:px-6">
           <button
             type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            onClick={() => scrollCatalogTop('smooth')}
             className="flex shrink-0 items-center gap-2.5"
             aria-label="CFOP Master, volver arriba"
           >
@@ -601,25 +648,49 @@ export const App: React.FC = () => {
           {/* Controles rápidos de la derecha */}
           <div className="flex shrink-0 items-center gap-2">
             {!isTimerTab && (
-              <button
-                type="button"
-                onClick={toggleLeftyMode}
-                title={
-                  isLeftyMode
-                    ? 'Modo Zurdo activo (L↔R activado en todos los algoritmos)'
-                    : 'Activar Modo Zurdo global (espejo L↔R)'
-                }
-                className={`inline-flex h-7 items-center gap-1 rounded-md border px-2 font-mono text-[11px] font-medium transition-colors ${
-                  isLeftyMode
-                    ? 'border-[#3B82F6] bg-[#3B82F6]/15 text-[#3B82F6]'
-                    : 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-[#FAFAFA]'
-                }`}
-              >
-                <span>L↔R</span>
-                <span className="hidden sm:inline">
-                  {isLeftyMode ? 'ZURDO' : 'DIESTRO'}
-                </span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={toggleViewerSide}
+                  title={
+                    viewerSide === 'right'
+                      ? 'Mover Visor 3D a la izquierda'
+                      : 'Mover Visor 3D a la derecha'
+                  }
+                  aria-label={
+                    viewerSide === 'right'
+                      ? 'Mover Visor 3D a la izquierda'
+                      : 'Mover Visor 3D a la derecha'
+                  }
+                  className="hidden h-7 items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900 px-2 font-mono text-[11px] font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:text-[#FAFAFA] lg:inline-flex"
+                >
+                  {viewerSide === 'right' ? (
+                    <PanelLeft className="h-3.5 w-3.5" />
+                  ) : (
+                    <PanelRight className="h-3.5 w-3.5" />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleLeftyMode}
+                  title={
+                    isLeftyMode
+                      ? 'Modo Zurdo activo (L↔R activado en todos los algoritmos)'
+                      : 'Activar Modo Zurdo global (espejo L↔R)'
+                  }
+                  className={`inline-flex h-7 items-center gap-1 rounded-md border px-2 font-mono text-[11px] font-medium transition-colors ${
+                    isLeftyMode
+                      ? 'border-[#3B82F6] bg-[#3B82F6]/15 text-[#3B82F6]'
+                      : 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-[#FAFAFA]'
+                  }`}
+                >
+                  <span>L↔R</span>
+                  <span className="hidden sm:inline">
+                    {isLeftyMode ? 'ZURDO' : 'DIESTRO'}
+                  </span>
+                </button>
+              </>
             )}
 
             <span
@@ -633,80 +704,146 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Contenido principal: Timer a pantalla completa o Split-Screen 12 columnas */}
+      {/* Contenido principal: Timer a pantalla completa o Dual-Pane bloqueado en Desktop */}
       <main
         className={
           isTimerTab
             ? 'flex w-full flex-1 flex-col pb-[calc(4.625rem+env(safe-area-inset-bottom))] lg:pb-0'
-            : 'px-safe pb-dock mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-5 pt-4 sm:px-6 sm:pt-5 lg:grid-cols-12 lg:items-start lg:gap-6'
+            : 'px-safe pb-dock mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-5 pt-4 sm:px-6 sm:pt-5 lg:h-[calc(100dvh-3.5rem-1px)] lg:flex-none lg:grid-cols-12 lg:items-stretch lg:gap-6 lg:overflow-hidden lg:pt-0 lg:pb-0'
         }
       >
         {isTimerTab ? (
           <TimerModule />
         ) : (
-          <div className="min-w-0 lg:col-span-7">
-            {activeSection === 'Notation' ? (
-              <NotationModule
-                selectedId={selection.id}
-                onSelectMove={handleSelectMove}
-                onSelectTrigger={handleSelectTrigger}
-              />
-            ) : (
-              <>
-                {activeSection === 'CFOP' && (
-                  <nav
-                    aria-label="Etapas CFOP"
-                    className="mb-3 grid grid-cols-4 gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1"
-                  >
-                    {CFOP_SUB_STAGE_ITEMS.map((sub) => {
-                      const isActive = activeCfopStage === sub.id;
-                      return (
-                        <button
-                          key={sub.id}
-                          type="button"
-                          onClick={() => handleCfopStageChange(sub.id)}
-                          aria-current={isActive ? 'page' : undefined}
-                          className={`inline-flex h-9 items-center justify-center gap-1 rounded-lg px-0.5 text-[11px] transition-colors sm:gap-1.5 sm:px-2.5 sm:text-xs ${
-                            isActive
-                              ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
-                              : 'font-medium text-zinc-300 hover:bg-zinc-800 hover:text-[#FAFAFA]'
-                          }`}
-                        >
-                          <span
-                            aria-hidden="true"
-                            className={`h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2 ${
-                              isActive ? sub.activeDotClass : sub.dotClass
-                            }`}
-                          />
-                          <span className="whitespace-nowrap">{sub.label}</span>
-                          <span
-                            className={`rounded px-0.5 py-0.5 font-mono text-[9px] tabular-nums leading-none sm:px-1.5 sm:text-[10px] ${
+          <div
+            ref={catalogPaneRef}
+            className={`min-w-0 lg:col-span-7 lg:flex lg:h-full lg:flex-col lg:overflow-y-auto lg:pt-4 ${
+              viewerSide === 'left'
+                ? 'lg:order-2 lg:pl-1.5'
+                : 'lg:order-1 lg:pr-1.5'
+            }`}
+          >
+            <div className="flex-1">
+              {activeSection === 'Notation' ? (
+                <NotationModule
+                  selectedId={selection.id}
+                  topFace={topFace}
+                  onSelectMove={handleSelectMove}
+                  onSelectTrigger={handleSelectTrigger}
+                />
+              ) : (
+                <>
+                  {activeSection === 'CFOP' && (
+                    <nav
+                      aria-label="Etapas CFOP móvil"
+                      className="mb-3 grid grid-cols-4 gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1 lg:hidden"
+                    >
+                      {CFOP_SUB_STAGE_ITEMS.map((sub) => {
+                        const isActive = activeCfopStage === sub.id;
+                        return (
+                          <button
+                            key={sub.id}
+                            type="button"
+                            onClick={() => handleCfopStageChange(sub.id)}
+                            aria-current={isActive ? 'page' : undefined}
+                            className={`inline-flex h-9 items-center justify-center gap-1 rounded-lg px-0.5 text-[11px] transition-colors sm:gap-1.5 sm:px-2.5 sm:text-xs ${
                               isActive
-                                ? 'bg-zinc-900/10 font-semibold text-zinc-800'
-                                : 'bg-zinc-800 text-zinc-400'
+                                ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
+                                : 'font-medium text-zinc-300 hover:bg-zinc-800 hover:text-[#FAFAFA]'
                             }`}
                           >
-                            {sub.count}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </nav>
-                )}
+                            <span
+                              aria-hidden="true"
+                              className={`h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2 ${
+                                isActive ? sub.activeDotClass : sub.dotClass
+                              }`}
+                            />
+                            <span className="whitespace-nowrap">
+                              {sub.label}
+                            </span>
+                            <span
+                              className={`rounded px-0.5 py-0.5 font-mono text-[9px] tabular-nums leading-none sm:px-1.5 sm:text-[10px] ${
+                                isActive
+                                  ? 'bg-zinc-900/10 font-semibold text-zinc-800'
+                                  : 'bg-zinc-800 text-zinc-400'
+                              }`}
+                            >
+                              {sub.count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </nav>
+                  )}
 
-                <CfopCatalogModule
-                  stage={activeCatalogStage}
-                  selectedCaseId={selection.id}
-                  onSelectCase={handleSelectCase}
-                  isLeftyGlobal={isLeftyMode}
-                  topFace={topFace}
-                  getMastery={getMastery}
-                  onCycleMastery={cycleMastery}
-                  onStartPractice={handleStartPractice}
-                  onFilteredCasesChange={setFilteredCatalogCases}
-                />
-              </>
-            )}
+                  <CfopCatalogModule
+                    stage={activeCatalogStage}
+                    selectedCaseId={selection.id}
+                    onSelectCase={handleSelectCase}
+                    isLeftyGlobal={isLeftyMode}
+                    topFace={topFace}
+                    getMastery={getMastery}
+                    onCycleMastery={cycleMastery}
+                    onStartPractice={handleStartPractice}
+                    onFilteredCasesChange={setFilteredCatalogCases}
+                    desktopStickySlot={
+                      activeSection === 'CFOP' ? (
+                        <nav
+                          aria-label="Etapas CFOP"
+                          className="grid grid-cols-4 gap-1 rounded-lg border border-zinc-800 bg-[#09090B] p-1"
+                        >
+                          {CFOP_SUB_STAGE_ITEMS.map((sub) => {
+                            const isActive = activeCfopStage === sub.id;
+                            return (
+                              <button
+                                key={sub.id}
+                                type="button"
+                                onClick={() => handleCfopStageChange(sub.id)}
+                                aria-current={isActive ? 'page' : undefined}
+                                className={`inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors ${
+                                  isActive
+                                    ? 'bg-[#FAFAFA] font-semibold text-[#09090B]'
+                                    : 'font-medium text-zinc-300 hover:bg-zinc-800 hover:text-[#FAFAFA]'
+                                }`}
+                              >
+                                <span
+                                  aria-hidden="true"
+                                  className={`h-2 w-2 shrink-0 rounded-full ${
+                                    isActive ? sub.activeDotClass : sub.dotClass
+                                  }`}
+                                />
+                                <span className="whitespace-nowrap">
+                                  {sub.label}
+                                </span>
+                                <span
+                                  className={`rounded px-1.5 py-0.5 font-mono text-[10px] tabular-nums leading-none ${
+                                    isActive
+                                      ? 'bg-zinc-900/10 font-semibold text-zinc-800'
+                                      : 'bg-zinc-800 text-zinc-400'
+                                  }`}
+                                >
+                                  {sub.count}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </nav>
+                      ) : undefined
+                    }
+                  />
+                </>
+              )}
+            </div>
+
+            {/* Footer compacto integrado al fondo del panel de catálogo en escritorio (cero scroll externo) */}
+            <footer className="mt-6 hidden border-t border-[#222226] py-3 lg:block">
+              <div className="flex items-center justify-between gap-2 font-mono text-[11px] text-zinc-600">
+                <span>
+                  CFOP Master · 17 Reducido + 125 Full CFOP (Cross, 41 F2L, 57 OLL, 21 PLL)
+                </span>
+                <span>WCA · cubing.js · PWA</span>
+              </div>
+            </footer>
           </div>
         )}
 
@@ -721,7 +858,7 @@ export const App: React.FC = () => {
           />
         )}
 
-        {/* Visor 3D (oculto y con atajos desactivados cuando Timer está activo) */}
+        {/* Visor 3D (fijo en viewport desktop, bottom sheet deslizable en móvil, oculto en Timer) */}
         <aside
           aria-label="Visor 3D"
           aria-hidden={isTimerTab || undefined}
@@ -733,7 +870,9 @@ export const App: React.FC = () => {
           className={
             isTimerTab
               ? 'hidden'
-              : `lg:col-span-5 lg:static lg:z-auto lg:block max-lg:max-h-sheet max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-50 max-lg:flex max-lg:flex-col max-lg:rounded-t-xl max-lg:border-t max-lg:border-[#222226] max-lg:bg-[#09090B] max-lg:transition-transform max-lg:duration-300 max-lg:ease-out ${
+              : `lg:col-span-5 lg:static lg:z-auto lg:block lg:h-full lg:overflow-y-auto lg:py-4 ${
+                  viewerSide === 'left' ? 'lg:order-1' : 'lg:order-2'
+                } max-lg:max-h-sheet max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-50 max-lg:flex max-lg:flex-col max-lg:rounded-t-xl max-lg:border-t max-lg:border-[#222226] max-lg:bg-[#09090B] max-lg:transition-transform max-lg:duration-300 max-lg:ease-out ${
                   isSheetOpen
                     ? 'max-lg:translate-y-0'
                     : 'max-lg:pointer-events-none max-lg:translate-y-full'
@@ -761,7 +900,7 @@ export const App: React.FC = () => {
             </button>
           </div>
 
-          <div className="no-scrollbar max-lg:pb-safe-2 max-lg:min-h-0 max-lg:flex-1 max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:px-2 lg:sticky lg:top-16 lg:max-h-[calc(100vh-4.5rem)] lg:overflow-y-auto">
+          <div className="no-scrollbar max-lg:pb-safe-2 max-lg:min-h-0 max-lg:flex-1 max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:px-2">
             <CubeViewer
               selection={selection}
               isLeftyGlobal={isLeftyMode}
@@ -781,17 +920,6 @@ export const App: React.FC = () => {
           </div>
         </aside>
       </main>
-
-      {!isTimerTab && (
-        <footer className="hidden border-t border-[#222226] py-4 lg:block">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 font-mono text-[11px] text-zinc-600">
-            <span>
-              CFOP Master · 17 CFOP Reducido + 125 Full CFOP (Cross, 41 F2L, 57 OLL, 21 PLL)
-            </span>
-            <span>Notación WCA · cubing.js · PWA</span>
-          </div>
-        </footer>
-      )}
 
       {/* Sticky Bottom Dock móvil (Zona del Pulgar optimizada, sin controles duplicados) */}
       <div className="pb-safe-2 fixed inset-x-0 bottom-0 z-30 border-t border-zinc-800/80 bg-[#09090B]/95 px-2.5 pt-1.5 backdrop-blur-md lg:hidden">

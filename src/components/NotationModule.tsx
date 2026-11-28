@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   FUNDAMENTAL_TRIGGERS,
   NOTATION_CATEGORY_LABELS,
@@ -6,11 +6,16 @@ import {
   NOTATION_RULES,
   type TriggerDemo,
 } from '../data/cfopData';
-import type { NotationCategory, NotationMove } from '../types/cfop';
+import type {
+  NotationCategory,
+  NotationMove,
+  TopFaceColor,
+} from '../types/cfop';
 import { triggerHaptic } from '../utils/haptics';
 
 interface NotationModuleProps {
   selectedId: string;
+  topFace?: TopFaceColor;
   onSelectMove: (move: NotationMove) => void;
   onSelectTrigger: (trigger: TriggerDemo) => void;
 }
@@ -29,19 +34,46 @@ function compactDirection(move: string): string {
   return move.includes("'") ? '↺ 90°' : '↻ 90°';
 }
 
-const WCA_LEGEND = [
-  { face: 'U', color: 'bg-[#FAFAFA]', label: 'Arriba' },
-  { face: 'F', color: 'bg-[#10B981]', label: 'Frente' },
-  { face: 'R', color: 'bg-[#EF4444]', label: 'Derecha' },
-  { face: 'D', color: 'bg-[#EAB308]', label: 'Abajo' },
-];
+const LEGEND_BY_TOP: Record<
+  TopFaceColor,
+  Array<{ face: string; color: string; label: string }>
+> = {
+  yellow: [
+    { face: 'U', color: 'bg-[#EAB308]', label: 'Arriba (Amarilla)' },
+    { face: 'F', color: 'bg-[#10B981]', label: 'Frente (Verde)' },
+    { face: 'R', color: 'bg-[#F97316]', label: 'Derecha (Naranja)' },
+    { face: 'D', color: 'bg-[#FAFAFA]', label: 'Abajo (Blanca)' },
+  ],
+  white: [
+    { face: 'U', color: 'bg-[#FAFAFA]', label: 'Arriba (Blanca)' },
+    { face: 'F', color: 'bg-[#10B981]', label: 'Frente (Verde)' },
+    { face: 'R', color: 'bg-[#EF4444]', label: 'Derecha (Roja)' },
+    { face: 'D', color: 'bg-[#EAB308]', label: 'Abajo (Amarilla)' },
+  ],
+};
 
 export const NotationModule: React.FC<NotationModuleProps> = ({
   selectedId,
+  topFace = 'yellow',
   onSelectMove,
   onSelectTrigger,
 }) => {
   const [activeCategory, setActiveCategory] = useState<'all' | NotationCategory>('all');
+  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const hasMountedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    const target = itemRefs.current[selectedId];
+    if (target) {
+      target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [selectedId]);
+
+  const legendItems = LEGEND_BY_TOP[topFace];
 
   const visibleCategories =
     activeCategory === 'all' ? CATEGORY_ORDER : [activeCategory];
@@ -134,6 +166,9 @@ export const NotationModule: React.FC<NotationModuleProps> = ({
                 return (
                   <button
                     key={item.id}
+                    ref={(el) => {
+                      itemRefs.current[item.id] = el;
+                    }}
                     type="button"
                     onClick={() => {
                       triggerHaptic('light');
@@ -181,6 +216,9 @@ export const NotationModule: React.FC<NotationModuleProps> = ({
             return (
               <button
                 key={trig.id}
+                ref={(el) => {
+                  itemRefs.current[trig.id] = el;
+                }}
                 type="button"
                 onClick={() => {
                   triggerHaptic('light');
@@ -207,14 +245,14 @@ export const NotationModule: React.FC<NotationModuleProps> = ({
         </div>
       </section>
 
-      {/* Leyenda de orientación WCA */}
+      {/* Leyenda de orientación sincronizada con topFace */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-md border border-[#222226] bg-[#111113] px-3 py-2.5">
         <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
           Orientación
         </span>
-        {WCA_LEGEND.map((item) => (
+        {legendItems.map((item) => (
           <span key={item.face} className="inline-flex items-center gap-1.5 text-xs text-zinc-400">
-            <span className={`h-2.5 w-2.5 rounded-sm ${item.color}`} />
+            <span className={`h-2.5 w-2.5 rounded-sm border border-zinc-700/60 ${item.color}`} />
             <span translate="no" className="font-mono font-semibold text-zinc-200">
               {item.face}
             </span>

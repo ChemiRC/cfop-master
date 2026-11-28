@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Brain,
   Check,
@@ -51,6 +51,8 @@ interface CfopCatalogModuleProps {
   onStartPractice: (cases: CfopCase[], label: string) => void;
   /** Reporta los casos filtrados activos para habilitar Anterior/Siguiente en CubeViewer */
   onFilteredCasesChange?: (cases: CfopCase[]) => void;
+  /** Selector de etapas CFOP fijado dentro de la barra sticky en escritorio (lg:) */
+  desktopStickySlot?: React.ReactNode;
 }
 
 type CatalogScope = 'full' | '2look';
@@ -161,6 +163,7 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
   onCycleMastery,
   onStartPractice,
   onFilteredCasesChange,
+  desktopStickySlot,
 }) => {
   const [scope, setScope] = useState<CatalogScope>('full');
   const [masteryFilter, setMasteryFilter] = useState<MasteryFilter>('all');
@@ -171,6 +174,8 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [copiedCaseId, setCopiedCaseId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<CatalogViewMode>(loadInitialViewMode);
+  const cardRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  const hasMountedRef = useRef<boolean>(false);
 
   useEffect(() => {
     setScope('full');
@@ -180,6 +185,18 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
     setSearchQuery('');
     setShowFilters(false);
   }, [stage]);
+
+  // Desplaza suavemente la tarjeta activa a la vista cuando cambia la selección (Prev/Next o teclado)
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    const targetEl = cardRefs.current[selectedCaseId];
+    if (targetEl) {
+      targetEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [selectedCaseId, viewMode]);
 
   const handleToggleViewMode = useCallback(() => {
     triggerHaptic('selection');
@@ -471,8 +488,11 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
         </section>
       )}
 
-      {/* Barra Sticky ultra-compacta de 2 filas (~82px en móvil) */}
-      <div className="top-header sticky z-20 -mx-4 space-y-1.5 border-b border-[#222226] bg-[#09090B]/95 px-4 py-2 backdrop-blur-md sm:mx-0 sm:rounded-lg sm:border sm:bg-[#111113]/95 sm:p-2.5">
+      {/* Barra Sticky ultra-compacta de 2 filas (~82px en móvil) y fijada a lg:top-0 dentro del panel desktop */}
+      <div className="top-header sticky z-20 -mx-4 space-y-1.5 border-b border-[#222226] bg-[#09090B]/95 px-4 py-2 backdrop-blur-md sm:mx-0 sm:rounded-lg sm:border sm:bg-[#111113]/95 sm:p-2.5 lg:top-0">
+        {desktopStickySlot && (
+          <div className="hidden lg:block">{desktopStickySlot}</div>
+        )}
         {/* Fila 1: Buscador + Filtros (con badge) + Vista Visual/Lista + Practicar */}
         <div className="flex items-center gap-1.5">
           <div className="relative min-w-0 flex-1">
@@ -800,7 +820,12 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
               : 'border-[#222226] bg-[#111113] hover:border-zinc-700 hover:bg-[#16161A]';
 
             return (
-              <li key={item.id}>
+              <li
+                key={item.id}
+                ref={(el) => {
+                  cardRefs.current[item.id] = el;
+                }}
+              >
                 <button
                   type="button"
                   onClick={() => {
@@ -902,7 +927,12 @@ export const CfopCatalogModule: React.FC<CfopCatalogModuleProps> = ({
                 : 'Por aprender';
 
             return (
-              <li key={item.id}>
+              <li
+                key={item.id}
+                ref={(el) => {
+                  cardRefs.current[item.id] = el;
+                }}
+              >
                 <div
                   role="button"
                   tabIndex={0}

@@ -618,3 +618,57 @@ export function simulateCasePreState(
     pllArrows,
   };
 }
+
+export type ScrambleNetFaces = Record<FaceCode, string[][]>;
+
+/**
+ * Aplica un scramble WCA hacia adelante sobre un cubo resuelto en orientación oficial WCA
+ * (Blanca arriba U, Verde al frente F, Roja derecha R, Naranja izquierda L, Azul atrás B, Amarilla abajo D)
+ * y devuelve las 6 caras 3x3 listas para renderizar un plano 2D desplegado sin estado.
+ */
+export function simulateScrambleNet(scramble: string): ScrambleNetFaces {
+  const cubies = createSolvedCube();
+  const tokens = splitAlgMoves(scramble);
+
+  for (const tok of tokens) {
+    const m = tok.match(/^([RLUDFBrludfbMESxyz])(2|')?$/);
+    if (!m) continue;
+    const [, base, mod = ''] = m;
+    if (mod === '2') {
+      applySingleQuantumMove(cubies, base, false);
+      applySingleQuantumMove(cubies, base, false);
+    } else {
+      applySingleQuantumMove(cubies, base, mod === "'");
+    }
+  }
+
+  const palette = FACE_COLORS_BY_TOP.white;
+
+  const getColor = (
+    x: number,
+    y: number,
+    z: number,
+    nx: number,
+    ny: number,
+    nz: number
+  ): string => {
+    const cubie = cubies.find(
+      (c) => c.pos.x === x && c.pos.y === y && c.pos.z === z
+    );
+    if (!cubie) return IGNORED_COLOR;
+    const st = cubie.stickers.find(
+      (s) => s.normal.x === nx && s.normal.y === ny && s.normal.z === nz
+    );
+    if (!st) return IGNORED_COLOR;
+    return palette[st.homeFace];
+  };
+
+  return {
+    U: [-1, 0, 1].map((z) => [-1, 0, 1].map((x) => getColor(x, 1, z, 0, 1, 0))),
+    L: [1, 0, -1].map((y) => [-1, 0, 1].map((z) => getColor(-1, y, z, -1, 0, 0))),
+    F: [1, 0, -1].map((y) => [-1, 0, 1].map((x) => getColor(x, y, 1, 0, 0, 1))),
+    R: [1, 0, -1].map((y) => [1, 0, -1].map((z) => getColor(1, y, z, 1, 0, 0))),
+    B: [1, 0, -1].map((y) => [1, 0, -1].map((x) => getColor(x, y, -1, 0, 0, -1))),
+    D: [1, 0, -1].map((z) => [-1, 0, 1].map((x) => getColor(x, -1, z, 0, -1, 0))),
+  };
+}

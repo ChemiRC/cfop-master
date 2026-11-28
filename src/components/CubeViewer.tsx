@@ -26,7 +26,11 @@ import type {
   TwistyPlayerElement,
   VisualStage,
 } from '../types/cfop';
-import { invertAlg, mirrorAlgLR, splitAlgMoves } from '../utils/algHelpers';
+import {
+  getCleanSetupAlg,
+  mirrorAlgLR,
+  splitAlgMoves,
+} from '../utils/algHelpers';
 import { triggerHaptic } from '../utils/haptics';
 import { AlgNotationBadges } from './AlgNotationBadges';
 import { Cube2DPreview } from './Cube2DPreview';
@@ -78,13 +82,18 @@ const STICKERING_MASKS: Record<TopFaceColor, Record<StickeringType, string>> = {
   },
 };
 
+const AUTOPLAY_STORAGE_KEY = 'cfop_autoplay';
+
 const SPEED_SEGMENTS = [
   { value: 0.25, label: '0.25x' },
   { value: 0.5, label: '0.5x' },
   { value: 1, label: '1x' },
   { value: 1.5, label: '1.5x' },
   { value: 2, label: '2x' },
+  { value: 3, label: '3x' },
 ] as const;
+
+const VALID_SPEEDS: readonly number[] = SPEED_SEGMENTS.map((s) => s.value);
 
 type CameraPreset = 'right' | 'left' | 'top';
 
@@ -150,6 +159,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
   const playerRef = useRef<TwistyPlayerElement | null>(null);
   const loopTimerRef = useRef<number | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const prevSelectionIdRef = useRef<string>(selection.id);
 
   const [internalTopFace, setInternalTopFace] = useState<TopFaceColor>('yellow');
   const effectiveTopFace: TopFaceColor = topFace ?? internalTopFace;
@@ -169,21 +179,53 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     try {
       const saved = window.localStorage.getItem('cfop_tempo_scale');
       const parsed = saved ? Number(saved) : 1;
-      if ([0.25, 0.5, 1, 1.5, 2].includes(parsed)) return parsed;
+      if (VALID_SPEEDS.includes(parsed)) return parsed;
     } catch {
       // Ignore storage errors
     }
     return 1;
   });
+
+  // Auto-Play persistente (activo por defecto en desktop para flujo instantáneo al hacer clic)
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState<boolean>(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = window.localStorage.getItem(AUTOPLAY_STORAGE_KEY);
+        if (saved === 'true') return true;
+        if (saved === 'false') return false;
+      }
+    } catch {
+      // Ignore storage errors
+    }
+    return (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(min-width: 1024px)').matches
+    );
+  });
+
+  const handleToggleAutoPlay = useCallback(() => {
+    triggerHaptic('selection');
+    setAutoPlayEnabled((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(AUTOPLAY_STORAGE_KEY, String(next));
+      } catch {
+        // Ignore storage errors
+      }
+      return next;
+    });
+  }, []);
+
   const [viewMode, setViewMode] = useState<'3D' | '2D'>('3D');
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>('right');
   const [isMirrored, setIsMirrored] = useState<boolean>(Boolean(isLeftyGlobal));
   const [selectedAlgIndex, setSelectedAlgIndex] = useState<number>(0);
   const [forceFullStickering, setForceFullStickering] = useState<boolean>(false);
+  // Compacto en portátiles 13" (< 820px de altura): detalles colapsados por defecto para cero scroll interno
   const [showDetails, setShowDetails] = useState<boolean>(
     () =>
       typeof window !== 'undefined' &&
-      window.matchMedia('(min-width: 1024px)').matches
+      window.matchMedia('(min-width: 1024px) and (min-height: 820px)').matches
   );
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -236,7 +278,10 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     [baseAlg, isMirrored]
   );
 
-  const setupAlg = useMemo(() => invertAlg(effectiveAlg), [effectiveAlg]);
+  const setupAlg = useMemo(
+    () => getCleanSetupAlg(effectiveAlg),
+    [effectiveAlg]
+  );
 
   const moves = useMemo(() => splitAlgMoves(effectiveAlg), [effectiveAlg]);
 
@@ -395,6 +440,9 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     const player = playerRef.current;
     if (!player || !playerReady) return;
 
+    const selectionChanged = prevSelectionIdRef.current !== selection.id;
+    prevSelectionIdRef.current = selection.id;
+
     try {
       player.pause?.();
       player.experimentalSetupAlg = effectiveSetupAlg;
@@ -406,7 +454,11 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
       setActiveMoveIndex(-1);
       setCompletedMoves(0);
 
-      if (selection.autoPlayNonce) {
+      const shouldAutoPlay =
+        Boolean(selection.autoPlayNonce) ||
+        (autoPlayEnabled && selectionChanged);
+
+      if (shouldAutoPlay) {
         const timer = window.setTimeout(() => {
           try {
             playerRef.current?.jumpToStart?.({ flash: false });
@@ -422,12 +474,14 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     }
   }, [
     playerReady,
+    selection.id,
     effectiveAlg,
     effectiveSetupAlg,
     selection.setupAnchor,
     effectiveStickering,
     effectiveStickeringMask,
     selection.autoPlayNonce,
+    autoPlayEnabled,
   ]);
 
   useEffect(() => {
@@ -577,12 +631,35 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     if (!atStart) stepPlayer(-1);
   }, [atStart, stepPlayer]);
 
-  // Atajos de teclado: Space (Play/Pausa), ← / → (Paso a paso), R (Reiniciar)
+  const handleToggleMirror = useCallback(() => {
+    triggerHaptic('selection');
+    setIsMirrored((prev) => {
+      const next = !prev;
+      setCameraPreset(next ? 'left' : 'right');
+      return next;
+    });
+  }, []);
+
+  const handleAdjustSpeed = useCallback((delta: -1 | 1) => {
+    setTempoScale((prev) => {
+      const idx = SPEED_SEGMENTS.findIndex(
+        (seg) => Math.abs(seg.value - prev) < 0.03
+      );
+      const safeIdx = idx >= 0 ? idx : 2;
+      const nextIdx = Math.max(
+        0,
+        Math.min(SPEED_SEGMENTS.length - 1, safeIdx + delta)
+      );
+      if (nextIdx !== safeIdx) triggerHaptic('selection');
+      return SPEED_SEGMENTS[nextIdx].value;
+    });
+  }, []);
+
+  // Atajos de teclado Pro: Space, ←/→, ↑/↓ (K/J), L, R, M, [/]
   useEffect(() => {
     if (!shortcutsEnabled) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (!playerReady) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       const target = e.target as HTMLElement | null;
@@ -596,6 +673,38 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
         return;
       }
 
+      if (e.key === 'ArrowUp' || e.key === 'k' || e.key === 'K') {
+        if (navigation && navigation.total > 1) {
+          e.preventDefault();
+          navigation.onPrev();
+        }
+        return;
+      }
+      if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J') {
+        if (navigation && navigation.total > 1) {
+          e.preventDefault();
+          navigation.onNext();
+        }
+        return;
+      }
+      if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        handleToggleMirror();
+        return;
+      }
+      if (e.key === '[') {
+        e.preventDefault();
+        handleAdjustSpeed(-1);
+        return;
+      }
+      if (e.key === ']') {
+        e.preventDefault();
+        handleAdjustSpeed(1);
+        return;
+      }
+
+      if (!playerReady) return;
+
       if (e.code === 'Space') {
         e.preventDefault();
         handleTogglePlay();
@@ -605,6 +714,9 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
         handleStepBackward();
+      } else if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        handleToggleLoop();
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
         handleReset();
@@ -616,10 +728,14 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
   }, [
     shortcutsEnabled,
     playerReady,
+    navigation,
     handleTogglePlay,
     handleStepForward,
     handleStepBackward,
+    handleToggleLoop,
     handleReset,
+    handleToggleMirror,
+    handleAdjustSpeed,
   ]);
 
   const handleJumpToMove = useCallback(
@@ -643,15 +759,6 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
     },
     [clearLoopTimer]
   );
-
-  const handleToggleMirror = useCallback(() => {
-    triggerHaptic('selection');
-    setIsMirrored((prev) => {
-      const next = !prev;
-      setCameraPreset(next ? 'left' : 'right');
-      return next;
-    });
-  }, []);
 
   const handleCycleAltAlg = useCallback(() => {
     if (availableAlgs.length <= 1) return;
@@ -750,7 +857,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
       <div
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}
-        className="flex items-center gap-1.5 border-b border-[#222226] px-3 py-2"
+        className="flex items-center gap-1.5 border-b border-[#222226] px-3 py-2 lg:py-1.5"
       >
         <span
           translate="no"
@@ -810,8 +917,8 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
         </button>
       </div>
 
-      {/* Viewport 3D / 2D con etiquetas y chip compacto de orientación U en la esquina */}
-      <div className="relative h-[clamp(180px,28dvh,240px)] border-b border-[#222226] bg-[#0C0C0E] lg:h-64">
+      {/* Viewport 3D / 2D compacto en 13" (lg:h-52 xl:h-60) con chip de orientación U */}
+      <div className="relative h-[clamp(180px,28dvh,240px)] border-b border-[#222226] bg-[#0C0C0E] lg:h-52 xl:h-60">
         <IsolatedTwistyHost ref={containerRef} hidden={viewMode !== '3D'} />
 
         {viewMode === '2D' && (
@@ -923,13 +1030,26 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
           </div>
         )}
 
-        {/* Inferior derecha: espejo / alternativo / máscara */}
+        {/* Inferior derecha: auto-play / espejo / alternativo / máscara */}
         <div translate="no" className="absolute right-2 bottom-2 z-10 flex gap-1">
+          <button
+            type="button"
+            onClick={handleToggleAutoPlay}
+            aria-pressed={autoPlayEnabled}
+            title={
+              autoPlayEnabled
+                ? 'Auto-Play activo: reproduce automáticamente al seleccionar un caso'
+                : 'Activar Auto-Play al seleccionar un caso'
+            }
+            className={chipClass(autoPlayEnabled)}
+          >
+            AUTO
+          </button>
           <button
             type="button"
             onClick={handleToggleMirror}
             aria-pressed={isMirrored}
-            title="Espejo izquierda ↔ derecha"
+            title="Espejo izquierda ↔ derecha (M)"
             className={chipClass(isMirrored)}
           >
             L↔R
@@ -999,7 +1119,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
 
       {/* Guía Ergonómica Técnica: Agarre Inicial, AUF y Video Timestamp (CFOP Reducido) */}
       {(selection.grip || selection.auf || selection.videoUrl) && (
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-[#222226] bg-[#0C0C0E] px-3 py-1.5 font-mono text-[11px] tabular-nums text-zinc-400">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 border-b border-[#222226] bg-[#0C0C0E] px-3 py-1.5 font-mono text-[11px] tabular-nums text-zinc-400 lg:py-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             {selection.grip && (
               <div className="flex items-center gap-1">
@@ -1032,7 +1152,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
       <div
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}
-        className="border-b border-[#222226] bg-[#09090B] px-3 py-2"
+        className="border-b border-[#222226] bg-[#09090B] px-3 py-2 lg:py-1.5"
       >
         <div className="mb-1 flex items-center justify-between gap-2 font-mono text-[11px] tabular-nums text-zinc-500">
           <span>Secuencia (toca un paso)</span>
@@ -1099,8 +1219,8 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
         />
       </div>
 
-      {/* Controles de reproducción manos libres (Play + Bucle + Paso a paso) + Velocidad + Anterior/Siguiente */}
-      <div className="space-y-2 border-b border-[#222226] px-3 py-2.5">
+      {/* Controles de reproducción manos libres (Play + Bucle + Paso a paso) + Velocidad 6 niveles + Anterior/Siguiente */}
+      <div className="space-y-2 border-b border-[#222226] px-3 py-2.5 lg:space-y-1.5 lg:py-2">
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -1191,7 +1311,7 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
           translate="no"
           role="radiogroup"
           aria-label="Velocidad"
-          className="grid grid-cols-5 rounded-md border border-zinc-800 bg-[#09090B] p-0.5"
+          className="grid grid-cols-6 rounded-md border border-zinc-800 bg-[#09090B] p-0.5"
         >
           {SPEED_SEGMENTS.map((seg) => {
             const active = Math.abs(tempoScale - seg.value) < 0.03;
@@ -1253,23 +1373,27 @@ export const CubeViewer: React.FC<CubeViewerProps> = ({
           </div>
         )}
 
-        {/* Atajos de teclado: solo en pantallas con teclado */}
-        <div className="hidden items-center justify-center gap-4 text-[11px] text-zinc-500 lg:flex">
+        {/* Atajos de teclado Pro: solo en pantallas con teclado */}
+        <div className="hidden flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[10px] text-zinc-500 lg:flex">
           {[
-            { keys: ['Espacio'], label: 'Play/Pausa' },
-            { keys: ['←', '→'], label: 'Paso a paso' },
-            { keys: ['R'], label: 'Reiniciar' },
+            { keys: ['Espacio'], label: 'Play' },
+            { keys: ['←', '→'], label: 'Paso' },
+            { keys: ['↑', '↓'], label: 'Caso' },
+            { keys: ['L'], label: 'Bucle' },
+            { keys: ['R'], label: 'Reset' },
+            { keys: ['M'], label: 'L↔R' },
+            { keys: ['[', ']'], label: 'Vel.' },
           ].map((hint) => (
-            <span key={hint.label} className="inline-flex items-center gap-1">
+            <span key={hint.label} className="inline-flex items-center gap-0.5">
               {hint.keys.map((k) => (
                 <kbd
                   key={k}
-                  className="rounded border border-zinc-800 bg-[#09090B] px-1.5 py-0.5 font-mono text-[10px] text-zinc-300"
+                  className="rounded border border-zinc-800 bg-[#09090B] px-1 py-0.5 font-mono text-[9px] text-zinc-300"
                 >
                   {k}
                 </kbd>
               ))}
-              <span>{hint.label}</span>
+              <span className="ml-0.5">{hint.label}</span>
             </span>
           ))}
         </div>

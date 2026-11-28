@@ -218,3 +218,17 @@ export function invertAlg(alg: string): string {
     })
     .join(' ');
 }
+
+/**
+ * Devuelve un algoritmo de Setup limpio (inverso WCA) eliminando rotaciones finales
+ * redundantes del eje vertical (y, y', y2) que no alteran la preparación física del caso,
+ * mientras preserva rotaciones x/z que sí pertenecen al algoritmo (ej. Aa-Perm, E-Perm).
+ */
+export function getCleanSetupAlg(alg: string): string {
+  const invertedTokens = splitAlgMoves(invertAlg(alg));
+  const trimmed = [...invertedTokens];
+  while (trimmed.length > 0 && /^y(2|')?$/.test(trimmed[trimmed.length - 1])) {
+    trimmed.pop();
+  }
+  return (trimmed.length > 0 ? trimmed : invertedTokens).join(' ');
+}

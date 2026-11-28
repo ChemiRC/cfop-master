@@ -153,14 +153,14 @@ export const F2L_CASES: CfopCase[] = [
     category: 'Separadas en capa U',
     subcategory: 'Separadas en capa U',
     twoLook: false,
-    alg: "U' R U2 R' U' R U2 R'",
-    altAlgs: ["M' U' M U2 r U' r'", "U' R U2 R' U2 R U' R'"],
+    alg: "U' R U2 R' U2 R U' R'",
+    altAlgs: ["M' U' M U2 r U' r'"],
     setup: "R U R' U2' R U2' R' U",
     recognition:
       'Esquina en UFR (blanco a la derecha) y arista en UL con el mismo color arriba.',
     explanation:
-      '[Top 1 SpeedCubeDB] 2-gen rítmico: U\' R U2 R\' esconde la esquina, alinea la arista y repite U\' R U2 R\'.',
-    triggers: [],
+      '[Top 1 SpeedCubeDB] 2-gen limpio: U\' R U2 R\' esconde la esquina, alinea con U2 e inserta directo con R U\' R\'.',
+    triggers: ["Insert (R U' R')"],
     tags: ['Colores iguales', 'Sin rotación'],
     grip: 'Home grip',
     auf: 'Esquina en UFR, arista izquierda (UL)',

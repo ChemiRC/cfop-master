@@ -17,7 +17,7 @@
     background-size: 24px 24px;
     color: #f4f4f5;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    overflow-x: hidden;
+    overflow-x: clip;
     overscroll-behavior-y: none;
   }
 

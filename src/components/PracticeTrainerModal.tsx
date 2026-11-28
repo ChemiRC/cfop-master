@@ -8,6 +8,7 @@ import {
   Lightbulb,
   Play,
   RotateCcw,
+  RotateCw,
   Shuffle,
   X,
 } from 'lucide-react';
@@ -17,7 +18,7 @@ import type {
   TopFaceColor,
   VisualStage,
 } from '../types/cfop';
-import { invertAlg, mirrorAlgLR } from '../utils/algHelpers';
+import { getCleanSetupAlg, mirrorAlgLR } from '../utils/algHelpers';
 import { triggerHaptic } from '../utils/haptics';
 import { AlgNotationBadges } from './AlgNotationBadges';
 import { Cube2DPreview } from './Cube2DPreview';
@@ -64,6 +65,22 @@ function buildSmartQueue(
   ];
 }
 
+type AufStep = 0 | 1 | 2 | 3;
+
+const AUF_ROTATIONS: Record<
+  AufStep,
+  { rotateClass: string; revealedLabel: string }
+> = {
+  0: { rotateClass: 'rotate-0', revealedLabel: '0° (estándar)' },
+  1: { rotateClass: 'rotate-90', revealedLabel: "+90° (AUF U')" },
+  2: { rotateClass: 'rotate-180', revealedLabel: '180° (AUF U2)' },
+  3: { rotateClass: '-rotate-90', revealedLabel: '-90° (AUF U)' },
+};
+
+function randomAufStep(): AufStep {
+  return Math.floor(Math.random() * 4) as AufStep;
+}
+
 function resolvePreviewStage(item: CfopCase): VisualStage {
   if (item.visualStage) return item.visualStage;
   if (item.stage === 'Reducido') return 'OLL';
@@ -80,6 +97,15 @@ export const PracticeTrainerModal: React.FC<PracticeTrainerModalProps> = ({
   onOpenIn3D,
   onClose,
 }) => {
+  const supportsLastLayerAuf = useMemo(
+    () =>
+      cases.some((c) => {
+        const st = resolvePreviewStage(c);
+        return st === 'OLL' || st === 'PLL';
+      }),
+    [cases]
+  );
+
   const [queue, setQueue] = useState<CfopCase[]>(() =>
     buildSmartQueue(cases, getMastery)
   );
@@ -87,27 +113,26 @@ export const PracticeTrainerModal: React.FC<PracticeTrainerModalProps> = ({
   const [isRevealed, setIsRevealed] = useState<boolean>(false);
   const [showSetup, setShowSetup] = useState<boolean>(false);
   const [showHint, setShowHint] = useState<boolean>(false);
+  const [randomAufEnabled, setRandomAufEnabled] = useState<boolean>(() =>
+    cases.some((c) => {
+      const st = resolvePreviewStage(c);
+      return st === 'OLL' || st === 'PLL';
+    })
+  );
+  const [aufStep, setAufStep] = useState<AufStep>(() => randomAufStep());
   const [copiedKey, setCopiedKey] = useState<'alg' | 'setup' | null>(null);
   const [knownCount, setKnownCount] = useState<number>(0);
   const [reviewCount, setReviewCount] = useState<number>(0);
   const [missedIds, setMissedIds] = useState<Set<string>>(() => new Set());
 
-  // Bloquea el scroll del fondo y permite cerrar con Escape
+  // Bloquea el scroll del fondo mientras el modal está abierto
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
     return () => {
       document.body.style.overflow = prevOverflow;
-      window.removeEventListener('keydown', onKeyDown);
     };
-  }, [onClose]);
+  }, []);
 
   const currentCase = queue[currentIndex] ?? null;
   const isComplete = currentIndex >= queue.length;
@@ -120,13 +145,22 @@ export const PracticeTrainerModal: React.FC<PracticeTrainerModalProps> = ({
     return isLeftyGlobal ? mirrorAlgLR(currentCase.alg) : currentCase.alg;
   }, [currentCase, isLeftyGlobal]);
 
-  const setupAlg = useMemo(() => invertAlg(displayAlg), [displayAlg]);
+  const setupAlg = useMemo(() => getCleanSetupAlg(displayAlg), [displayAlg]);
+
+  const currentPreviewStage: VisualStage = currentCase
+    ? resolvePreviewStage(currentCase)
+    : 'OLL';
+  const applyAufToCard =
+    randomAufEnabled &&
+    (currentPreviewStage === 'OLL' || currentPreviewStage === 'PLL');
+  const activeAufMeta = AUF_ROTATIONS[applyAufToCard ? aufStep : 0];
 
   const resetCardUi = useCallback(() => {
     setIsRevealed(false);
     setShowSetup(false);
     setShowHint(false);
     setCopiedKey(null);
+    setAufStep(randomAufStep());
   }, []);
 
   const handleShuffleDeck = useCallback(() => {
@@ -206,6 +240,70 @@ export const PracticeTrainerModal: React.FC<PracticeTrainerModalProps> = ({
     resetCardUi();
   }, [currentCase, onSetMastery, resetCardUi]);
 
+  // Atajos de teclado completos en escritorio: Space/Enter revelar, 1/← Repasar, 2/→ Dominado, S Setup, H Pista, Esc cerrar
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (isComplete || !currentCase) return;
+
+      if (!isRevealed) {
+        if (e.code === 'Space' || e.key === 'Enter') {
+          e.preventDefault();
+          triggerHaptic('light');
+          setIsRevealed(true);
+        } else if (e.key === 'h' || e.key === 'H') {
+          e.preventDefault();
+          triggerHaptic('selection');
+          setShowHint((prev) => !prev);
+        } else if (e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          triggerHaptic('selection');
+          setShowSetup((prev) => !prev);
+        }
+      } else {
+        if (e.key === '1' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          handleGradeReview();
+        } else if (e.key === '2' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          handleGradeKnown();
+        } else if (e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          triggerHaptic('selection');
+          setShowSetup((prev) => !prev);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [
+    currentCase,
+    handleGradeKnown,
+    handleGradeReview,
+    isComplete,
+    isRevealed,
+    onClose,
+  ]);
+
   const progressPct =
     queue.length > 0
       ? Math.min(100, Math.round((currentIndex / queue.length) * 100))
@@ -250,6 +348,30 @@ export const PracticeTrainerModal: React.FC<PracticeTrainerModalProps> = ({
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
+            {supportsLastLayerAuf && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('selection');
+                  setRandomAufEnabled((prev) => {
+                    const next = !prev;
+                    if (next) setAufStep(randomAufStep());
+                    return next;
+                  });
+                }}
+                aria-pressed={randomAufEnabled}
+                title="Rotar aleatoriamente 0°/90°/180°/270° cada diagrama OLL/PLL para entrenar reconocimiento multi-ángulo"
+                className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-2 font-mono text-[11px] font-medium transition-colors ${
+                  randomAufEnabled
+                    ? 'border-[#FAFAFA] bg-[#FAFAFA] font-semibold text-[#09090B]'
+                    : 'border-[#222226] bg-[#09090B] text-zinc-400 hover:border-zinc-700 hover:text-[#FAFAFA]'
+                }`}
+              >
+                <RotateCw className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline">Random AUF</span>
+                <span className="sm:hidden">AUF</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={handleShuffleDeck}
@@ -381,14 +503,18 @@ export const PracticeTrainerModal: React.FC<PracticeTrainerModalProps> = ({
                 )}
               </div>
 
-              {/* Diagrama 2D grande para reconocimiento instantáneo */}
+              {/* Diagrama 2D grande con rotación Random AUF opcional */}
               <div className="my-4">
-                <Cube2DPreview
-                  alg={displayAlg}
-                  stage={resolvePreviewStage(currentCase)}
-                  topFace={topFace}
-                  className="h-44 w-44 p-2 sm:h-48 sm:w-48"
-                />
+                <div
+                  className={`transition-transform duration-200 ${activeAufMeta.rotateClass}`}
+                >
+                  <Cube2DPreview
+                    alg={displayAlg}
+                    stage={currentPreviewStage}
+                    topFace={topFace}
+                    className="h-44 w-44 p-2 sm:h-48 sm:w-48"
+                  />
+                </div>
               </div>
 
               {/* Botones compactos de apoyo sin spoiler: Setup (Inverso) y Pista */}
@@ -408,6 +534,9 @@ export const PracticeTrainerModal: React.FC<PracticeTrainerModalProps> = ({
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   <span>Setup (Inverso)</span>
+                  <kbd className="hidden rounded border border-zinc-700 bg-zinc-900 px-1 py-0.5 text-[9px] text-zinc-400 lg:inline">
+                    S
+                  </kbd>
                 </button>
 
                 {!isRevealed && (
@@ -426,6 +555,9 @@ export const PracticeTrainerModal: React.FC<PracticeTrainerModalProps> = ({
                   >
                     <Lightbulb className="h-3.5 w-3.5" />
                     <span>Pista</span>
+                    <kbd className="hidden rounded border border-zinc-700 bg-zinc-900 px-1 py-0.5 text-[9px] text-zinc-400 lg:inline">
+                      H
+                    </kbd>
                   </button>
                 )}
               </div>
@@ -521,6 +653,14 @@ export const PracticeTrainerModal: React.FC<PracticeTrainerModalProps> = ({
                   </div>
 
                   <div className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-zinc-400">
+                    {applyAufToCard && (
+                      <span>
+                        <span className="text-zinc-600">ÁNGULO: </span>
+                        <span className="text-sky-400">
+                          {activeAufMeta.revealedLabel}
+                        </span>
+                      </span>
+                    )}
                     {currentCase.grip && (
                       <span>
                         <span className="text-zinc-600">AGARRE: </span>
@@ -555,6 +695,9 @@ export const PracticeTrainerModal: React.FC<PracticeTrainerModalProps> = ({
                 >
                   <Eye className="h-4 w-4" />
                   <span>Mostrar algoritmo</span>
+                  <kbd className="hidden rounded border border-zinc-400/50 bg-zinc-900/10 px-1.5 py-0.5 font-mono text-[10px] font-medium text-zinc-700 lg:inline">
+                    Espacio
+                  </kbd>
                 </button>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
@@ -565,6 +708,9 @@ export const PracticeTrainerModal: React.FC<PracticeTrainerModalProps> = ({
                   >
                     <Flame className="h-4 w-4" />
                     <span>Repasar</span>
+                    <kbd className="hidden rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-mono text-[10px] text-amber-200 lg:inline">
+                      1 / ←
+                    </kbd>
                   </button>
                   <button
                     type="button"
@@ -573,6 +719,9 @@ export const PracticeTrainerModal: React.FC<PracticeTrainerModalProps> = ({
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     <span>¡Lo domino!</span>
+                    <kbd className="hidden rounded border border-[#10B981]/40 bg-[#10B981]/10 px-1.5 py-0.5 font-mono text-[10px] text-[#10B981] lg:inline">
+                      2 / →
+                    </kbd>
                   </button>
                 </div>
               )}

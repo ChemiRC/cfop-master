@@ -10,6 +10,8 @@ export type VisualStage = CfopSubStage;
 
 export type TopFaceColor = 'yellow' | 'white';
 
+export type ViewerSide = 'right' | 'left';
+
 export type CaseMastery = 'unlearned' | 'practicing' | 'mastered';
 
 export type StickeringType = 'full' | 'Cross' | 'F2L' | 'OLL' | 'PLL';

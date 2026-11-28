@@ -1,5 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { RefreshCw, RotateCcw } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Grid3X3, RefreshCw, RotateCcw } from 'lucide-react';
+import {
+  simulateScrambleNet,
+  type FaceCode,
+} from '../utils/cubeSimulator';
 import { triggerHaptic } from '../utils/haptics';
 
 type TimerPhase = 'idle' | 'countdown' | 'ready' | 'running' | 'stopped';
@@ -56,6 +60,19 @@ function formatTimerMs(ms: number): string {
   return `${seconds}.${cc}`;
 }
 
+const SCRAMBLE_NET_LAYOUT: ReadonlyArray<{
+  face: FaceCode;
+  col: number;
+  row: number;
+}> = [
+  { face: 'U', col: 1, row: 0 },
+  { face: 'L', col: 0, row: 1 },
+  { face: 'F', col: 1, row: 1 },
+  { face: 'R', col: 2, row: 1 },
+  { face: 'B', col: 3, row: 1 },
+  { face: 'D', col: 1, row: 2 },
+];
+
 /**
  * Cronómetro WCA a pantalla completa (100% en memoria, cero localStorage/sessionStorage/BD).
  * Flujo exacto: Mantener presionado -> 3, 2, 1 (rojo) -> 0 (verde, fijo mientras siga presionado)
@@ -66,6 +83,13 @@ export const TimerModule: React.FC = () => {
   const [countdownValue, setCountdownValue] = useState<3 | 2 | 1>(3);
   const [elapsedMs, setElapsedMs] = useState<number>(0);
   const [scramble, setScramble] = useState<string>(() => generateWcaScramble());
+  const [showScrambleNet, setShowScrambleNet] = useState<boolean>(
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(min-width: 1024px)').matches
+  );
+
+  const scrambleNet = useMemo(() => simulateScrambleNet(scramble), [scramble]);
 
   const phaseRef = useRef<TimerPhase>('idle');
   const elapsedMsRef = useRef<number>(0);
@@ -422,7 +446,7 @@ export const TimerModule: React.FC = () => {
           onTouchEnd={stopBubble}
           onMouseDown={stopBubble}
           onMouseUp={stopBubble}
-          className="flex max-w-full items-center gap-2 rounded-lg border border-[#222226] bg-[#111113]/90 px-3 py-2"
+          className="flex max-w-full items-center gap-1.5 rounded-lg border border-[#222226] bg-[#111113]/90 px-3 py-2"
         >
           <p
             translate="no"
@@ -430,6 +454,27 @@ export const TimerModule: React.FC = () => {
           >
             {scramble}
           </p>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('selection');
+              setShowScrambleNet((prev) => !prev);
+            }}
+            aria-pressed={showScrambleNet}
+            aria-label={
+              showScrambleNet
+                ? 'Ocultar vista previa 2D del scramble'
+                : 'Mostrar vista previa 2D del scramble'
+            }
+            title="Vista 2D del scramble (WCA: U Blanca, F Verde)"
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors ${
+              showScrambleNet
+                ? 'border-[#FAFAFA] bg-[#FAFAFA] text-[#09090B]'
+                : 'border-[#222226] bg-[#09090B] text-zinc-400 hover:border-zinc-700 hover:text-[#FAFAFA]'
+            }`}
+          >
+            <Grid3X3 className="h-3.5 w-3.5" />
+          </button>
           <button
             type="button"
             onClick={handleRefreshScramble}
@@ -440,6 +485,63 @@ export const TimerModule: React.FC = () => {
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
         </div>
+
+        {/* Vista previa 2D desplegada WCA sin estado (inline bajo scramble en móvil, esquina inf-der en desktop) */}
+        {showScrambleNet && (
+          <div
+            onTouchStart={stopBubble}
+            onTouchEnd={stopBubble}
+            onMouseDown={stopBubble}
+            onMouseUp={stopBubble}
+            aria-label="Vista previa 2D del scramble en orientación WCA (Blanca arriba, Verde al frente)"
+            className="mt-1 flex flex-col items-center gap-1 rounded-lg border border-[#222226] bg-[#111113]/95 p-2 shadow-lg backdrop-blur-sm lg:absolute lg:right-6 lg:bottom-5 lg:z-10 lg:mt-0"
+          >
+            <svg
+              viewBox="0 0 152 115"
+              className="h-[92px] w-[122px] select-none sm:h-[108px] sm:w-[144px]"
+              role="img"
+              aria-label="Plano 2D de 6 caras del scramble"
+            >
+              {SCRAMBLE_NET_LAYOUT.map(({ face, col, row }) => {
+                const ox = 4 + col * 37;
+                const oy = 4 + row * 37;
+                const grid = scrambleNet[face];
+                return (
+                  <g key={face}>
+                    <rect
+                      x={ox - 1}
+                      y={oy - 1}
+                      width={35}
+                      height={35}
+                      rx={2.5}
+                      fill="#09090B"
+                      stroke="#222226"
+                      strokeWidth={0.8}
+                    />
+                    {grid.map((rColors, rIdx) =>
+                      rColors.map((fill, cIdx) => (
+                        <rect
+                          key={`${face}-${rIdx}-${cIdx}`}
+                          x={ox + cIdx * 11.5}
+                          y={oy + rIdx * 11.5}
+                          width={10}
+                          height={10}
+                          rx={1.5}
+                          fill={fill}
+                          stroke="#09090B"
+                          strokeWidth={0.6}
+                        />
+                      ))
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+            <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-500">
+              WCA · U Blanca · F Verde
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Centro: Reloj gigante de precisión con tabular-nums */}
